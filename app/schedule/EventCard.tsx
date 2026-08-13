@@ -5,6 +5,7 @@ import { format, isSameDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import Link from "next/link";
 import type { Event } from "@/lib/types";
+import { AssignmentChip } from "./AssignmentChip";
 
 export function EventCard({
   event,
@@ -57,24 +58,12 @@ export function EventCard({
 
       <div className="mt-2 flex flex-wrap gap-1.5">
         {event.assignments.map((a) => (
-          <span
+          <AssignmentChip
             key={a.id}
-            className="flex items-center gap-1 rounded-full border border-border-subtle px-2 py-0.5 text-xs text-foreground"
-            style={{ backgroundColor: `${a.person.color}22` }}
-          >
-            <span
-              className="h-1.5 w-1.5 rounded-full"
-              style={{ backgroundColor: a.person.color }}
-            />
-            {a.person.name}
-            <button
-              onClick={() => onRemoveAssignment(a.id)}
-              className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-muted/70 hover:bg-danger/20 hover:text-danger"
-              aria-label={`Usuń ${a.person.name} z wydarzenia`}
-            >
-              ×
-            </button>
-          </span>
+            assignment={a}
+            eventId={event.id}
+            onRemove={() => onRemoveAssignment(a.id)}
+          />
         ))}
         {event.assignments.length === 0 && (
           <span className="text-xs text-muted/50">Przeciągnij tu osobę…</span>

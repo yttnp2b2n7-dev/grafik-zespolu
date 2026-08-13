@@ -84,30 +84,51 @@ export default function SchedulePage() {
     setDraggedPerson(null);
     const { active, over } = e;
     if (!over) return;
-    const personId = active.data.current?.person?.id as string | undefined;
+
+    const activeData = active.data.current;
+    const personId = activeData?.person?.id as string | undefined;
     const eventId = over.data.current?.eventId as string | undefined;
     if (!personId || !eventId) return;
+
+    const sourceEventId = activeData?.sourceEventId as string | undefined;
+    const sourceAssignmentId = activeData?.assignmentId as string | undefined;
+    if (sourceEventId && sourceEventId === eventId) return;
 
     const res = await fetch("/api/assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ eventId, personId }),
     });
-    if (res.ok) {
-      const assignment: Assignment = await res.json();
-      setEvents((prev) =>
-        prev.map((ev) =>
-          ev.id === eventId
-            ? {
-                ...ev,
-                assignments: ev.assignments.some((a) => a.id === assignment.id)
-                  ? ev.assignments
-                  : [...ev.assignments, assignment],
-              }
-            : ev
-        )
-      );
+    if (!res.ok) return;
+    const assignment: Assignment = await res.json();
+
+    if (sourceEventId && sourceAssignmentId) {
+      await fetch(`/api/assignments/${sourceAssignmentId}`, {
+        method: "DELETE",
+      });
     }
+
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id === sourceEventId) {
+          return {
+            ...ev,
+            assignments: ev.assignments.filter(
+              (a) => a.id !== sourceAssignmentId
+            ),
+          };
+        }
+        if (ev.id === eventId) {
+          return {
+            ...ev,
+            assignments: ev.assignments.some((a) => a.id === assignment.id)
+              ? ev.assignments
+              : [...ev.assignments, assignment],
+          };
+        }
+        return ev;
+      })
+    );
   }
 
   async function removeAssignment(assignmentId: string) {
