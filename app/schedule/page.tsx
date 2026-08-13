@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -36,6 +36,7 @@ export default function SchedulePage() {
   const [loading, setLoading] = useState(true);
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
+  const isDraggingRef = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -63,12 +64,23 @@ export default function SchedulePage() {
     loadEvents().finally(() => setLoading(false));
   }, [loadEvents]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (isDraggingRef.current) return;
+      loadPeople();
+      loadEvents();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [loadPeople, loadEvents]);
+
   function handleDragStart(e: DragStartEvent) {
+    isDraggingRef.current = true;
     const person = e.active.data.current?.person as Person | undefined;
     setDraggedPerson(person ?? null);
   }
 
   async function handleDragEnd(e: DragEndEvent) {
+    isDraggingRef.current = false;
     setDraggedPerson(null);
     const { active, over } = e;
     if (!over) return;

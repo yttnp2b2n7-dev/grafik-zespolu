@@ -24,16 +24,21 @@ function SingleEventReport({ eventId }: { eventId: string }) {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    setNotFound(false);
-    fetch(`/api/events/${eventId}`).then(async (res) => {
-      if (!res.ok) {
-        setNotFound(true);
-      } else {
-        setEvent(await res.json());
-      }
-      setLoading(false);
-    });
+    const load = (showLoading: boolean) => {
+      if (showLoading) setLoading(true);
+      fetch(`/api/events/${eventId}`).then(async (res) => {
+        if (!res.ok) {
+          setNotFound(true);
+        } else {
+          setNotFound(false);
+          setEvent(await res.json());
+        }
+        if (showLoading) setLoading(false);
+      });
+    };
+    load(true);
+    const interval = setInterval(() => load(false), 5000);
+    return () => clearInterval(interval);
   }, [eventId]);
 
   return (
@@ -77,6 +82,11 @@ function WeekReport() {
   useEffect(() => {
     setLoading(true);
     loadEvents().finally(() => setLoading(false));
+  }, [loadEvents]);
+
+  useEffect(() => {
+    const interval = setInterval(loadEvents, 5000);
+    return () => clearInterval(interval);
   }, [loadEvents]);
 
   return (

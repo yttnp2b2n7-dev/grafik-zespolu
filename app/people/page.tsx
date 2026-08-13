@@ -34,6 +34,8 @@ export default function PeoplePage() {
 
   useEffect(() => {
     loadAll();
+    const interval = setInterval(loadAll, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const skillNames = useMemo(() => skills.map((s) => s.name), [skills]);
