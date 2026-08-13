@@ -7,6 +7,7 @@ import { addDays, addWeeks, format, startOfWeek, subWeeks } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
 import { EventReport } from "./EventReport";
+import { formatWeekReportText } from "@/lib/eventReportText";
 
 export function ReportsContent() {
   const searchParams = useSearchParams();
@@ -70,6 +71,19 @@ function WeekReport() {
   );
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const weekLabel = `${format(weekStart, "d MMM", { locale: pl })} – ${format(
+    addDays(weekStart, 6),
+    "d MMM yyyy",
+    { locale: pl }
+  )}`;
+
+  async function handleCopyAll() {
+    await navigator.clipboard.writeText(formatWeekReportText(events, weekLabel));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   const loadEvents = useCallback(async () => {
     const weekEnd = addDays(weekStart, 7);
@@ -91,12 +105,23 @@ function WeekReport() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="text-xl font-semibold text-foreground">
-        Raport tygodnia
-      </h1>
-      <p className="mt-1 text-sm text-muted">
-        Wszystkie wydarzenia z wybranego tygodnia wraz z przypisanymi osobami.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Raport tygodnia
+          </h1>
+          <p className="mt-1 text-sm text-muted">
+            Wszystkie wydarzenia z wybranego tygodnia wraz z przypisanymi
+            osobami.
+          </p>
+        </div>
+        <button
+          onClick={handleCopyAll}
+          className="shrink-0 rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
+        >
+          {copied ? "Skopiowano" : "Kopiuj cały raport"}
+        </button>
+      </div>
 
       <div className="mt-6 flex items-center gap-3">
         <button
@@ -106,10 +131,7 @@ function WeekReport() {
         >
           ←
         </button>
-        <div className="text-sm text-foreground">
-          {format(weekStart, "d MMM", { locale: pl })} –{" "}
-          {format(addDays(weekStart, 6), "d MMM yyyy", { locale: pl })}
-        </div>
+        <div className="text-sm text-foreground">{weekLabel}</div>
         <button
           onClick={() => setWeekStart((d) => addWeeks(d, 1))}
           className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
