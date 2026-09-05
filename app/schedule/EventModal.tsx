@@ -42,19 +42,7 @@ export function EventModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const [dayTimes, setDayTimes] = useState<Record<string, DayTime>>(() => {
-    const map: Record<string, DayTime> = {};
-    if (event) {
-      for (const d of event.days) {
-        const key = format(new Date(d.startsAt), "yyyy-MM-dd");
-        map[key] = {
-          start: format(new Date(d.startsAt), "HH:mm"),
-          end: format(new Date(d.endsAt), "HH:mm"),
-        };
-      }
-    }
-    return map;
-  });
+  const [dayTimes, setDayTimes] = useState<Record<string, DayTime>>({});
 
   const isEditing = Boolean(event);
 
@@ -214,7 +202,11 @@ export function EventModal({
           {isMultiDay && (
             <div>
               <label className="text-xs text-muted">Godziny dla każdego dnia</label>
-              <div className="mt-1 flex flex-col gap-1.5">
+              <p className="mt-0.5 text-[11px] text-muted/70">
+                Powstanie {dateRange.length} osobnych wydarzeń — do każdego
+                dnia będzie można przypisać inne osoby.
+              </p>
+              <div className="mt-1.5 flex flex-col gap-1.5">
                 {dateRange.map((day) => {
                   const key = format(day, "yyyy-MM-dd");
                   const dt = dayTimes[key] ?? { start: startTime, end: endTime };

@@ -14,7 +14,6 @@ const styles = StyleSheet.create({
   },
   eventTitle: { fontSize: 12, marginBottom: 2 },
   eventMeta: { fontSize: 9, color: "#555555", marginBottom: 3 },
-  dayMeta: { fontSize: 9, color: "#555555" },
   person: { fontSize: 9, marginTop: 2 },
   empty: { fontSize: 10, color: "#666" },
 });
@@ -49,22 +48,7 @@ export function TeamPeriodPdf({
         {events.map((event) => (
           <View key={event.id} style={styles.eventBlock} wrap={false}>
             <Text style={styles.eventTitle}>{event.title}</Text>
-            {event.days.length > 1 ? (
-              <>
-                <Text style={styles.eventMeta}>
-                  {format(new Date(event.startsAt), "d MMM yyyy", { locale: pl })} –{" "}
-                  {format(new Date(event.endsAt), "d MMM yyyy", { locale: pl })}
-                </Text>
-                {event.days.map((d) => (
-                  <Text key={d.id} style={styles.dayMeta}>
-                    {format(new Date(d.startsAt), "d MMMM yyyy, EEEE", { locale: pl })}:{" "}
-                    {format(new Date(d.startsAt), "HH:mm")}–{format(new Date(d.endsAt), "HH:mm")}
-                  </Text>
-                ))}
-              </>
-            ) : (
-              <Text style={styles.eventMeta}>{eventTimeLabel(event)}</Text>
-            )}
+            <Text style={styles.eventMeta}>{eventTimeLabel(event)}</Text>
             <Text style={styles.person}>
               Przypisani:{" "}
               {event.assignments.map((a) => a.person.name).join(", ") ||

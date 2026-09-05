@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
-      days: { orderBy: { startsAt: "asc" } },
     },
     orderBy: { startsAt: "asc" },
   });
@@ -31,12 +30,39 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const title = typeof body.title === "string" ? body.title.trim() : "";
-  const startsAt = body.startsAt ? new Date(body.startsAt) : null;
-  const endsAt = body.endsAt ? new Date(body.endsAt) : null;
   const color = typeof body.color === "string" ? body.color : null;
 
+  if (!title) {
+    return NextResponse.json({ error: "Invalid event data" }, { status: 400 });
+  }
+
+  // Multi-day creation: one independent event per day, numbered "Title i/N",
+  // so each day can be assigned different people.
+  if (Array.isArray(body.days) && body.days.length > 1) {
+    const days = parseDaysInput(body.days);
+    if (!days) {
+      return NextResponse.json({ error: "Invalid days data" }, { status: 400 });
+    }
+    const total = days.length;
+    const events = await prisma.$transaction(
+      days.map((d, i) =>
+        prisma.event.create({
+          data: {
+            title: `${title} ${i + 1}/${total}`,
+            startsAt: d.startsAt,
+            endsAt: d.endsAt,
+            color,
+          },
+        })
+      )
+    );
+    return NextResponse.json(events, { status: 201 });
+  }
+
+  const startsAt = body.startsAt ? new Date(body.startsAt) : null;
+  const endsAt = body.endsAt ? new Date(body.endsAt) : null;
+
   if (
-    !title ||
     !startsAt ||
     !endsAt ||
     Number.isNaN(startsAt.getTime()) ||
@@ -51,26 +77,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let days: ReturnType<typeof parseDaysInput> = [];
-  if (body.days !== undefined) {
-    const parsed = parseDaysInput(body.days);
-    if (!parsed) {
-      return NextResponse.json({ error: "Invalid days data" }, { status: 400 });
-    }
-    days = parsed;
-  }
-
   const event = await prisma.event.create({
-    data: {
-      title,
-      startsAt,
-      endsAt,
-      color,
-      ...(days && days.length > 0
-        ? { days: { create: days.map((d) => ({ startsAt: d.startsAt, endsAt: d.endsAt })) } }
-        : {}),
-    },
-    include: { days: { orderBy: { startsAt: "asc" } } },
+    data: { title, startsAt, endsAt, color },
   });
   return NextResponse.json(event, { status: 201 });
 }

@@ -38,17 +38,6 @@ model Event {
   endsAt      DateTime
   color       String?
   assignments Assignment[]
-  days        EventDay[]
-}
-
-model EventDay {
-  id       String   @id @default(cuid())
-  eventId  String
-  startsAt DateTime
-  endsAt   DateTime
-  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-
-  @@unique([eventId, startsAt])
 }
 
 model Assignment {

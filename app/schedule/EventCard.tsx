@@ -35,8 +35,6 @@ export function EventCard({
         "d MMM HH:mm",
         { locale: pl }
       )}`;
-  const hasPerDayTimes = event.days.length > 1;
-
   return (
     <div
       ref={setNodeRef}
@@ -51,26 +49,7 @@ export function EventCard({
           <p className="truncate text-sm font-medium text-foreground">
             {event.title}
           </p>
-          {hasPerDayTimes ? (
-            <div className="mt-1 flex gap-1">
-              {event.days.map((d) => {
-                const dayStart = new Date(d.startsAt);
-                const dayEnd = new Date(d.endsAt);
-                return (
-                  <div key={d.id} className="min-w-0 flex-1 text-center">
-                    <p className="truncate text-[10px] uppercase tracking-wide text-muted/60">
-                      {format(dayStart, "d MMM", { locale: pl })}
-                    </p>
-                    <p className="truncate text-xs text-muted">
-                      {format(dayStart, "HH:mm")}–{format(dayEnd, "HH:mm")}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs text-muted">{timeLabel}</p>
-          )}
+          <p className="text-xs text-muted">{timeLabel}</p>
         </div>
         {!readOnly && (
           <button

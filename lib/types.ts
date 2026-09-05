@@ -24,13 +24,6 @@ export type Assignment = {
   person: Person;
 };
 
-export type EventDay = {
-  id: string;
-  eventId: string;
-  startsAt: string;
-  endsAt: string;
-};
-
 export type Event = {
   id: string;
   title: string;
@@ -38,5 +31,4 @@ export type Event = {
   endsAt: string;
   color: string | null;
   assignments: Assignment[];
-  days: EventDay[];
 };

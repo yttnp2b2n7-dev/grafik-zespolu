@@ -13,7 +13,6 @@ export async function GET(
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
-      days: { orderBy: { startsAt: "asc" } },
     },
   });
 
@@ -31,11 +30,47 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
   const title = typeof body.title === "string" ? body.title.trim() : "";
+
+  if (!title) {
+    return NextResponse.json({ error: "Invalid event data" }, { status: 400 });
+  }
+
+  // Turning a single event into a multi-day range on edit: keep this
+  // event as day 1 and create independent events for the extra days,
+  // same as multi-day creation.
+  if (Array.isArray(body.days) && body.days.length > 1) {
+    const days = parseDaysInput(body.days);
+    if (!days) {
+      return NextResponse.json({ error: "Invalid days data" }, { status: 400 });
+    }
+    const total = days.length;
+    const [first, ...rest] = days;
+    const events = await prisma.$transaction([
+      prisma.event.update({
+        where: { id },
+        data: {
+          title: `${title} 1/${total}`,
+          startsAt: first.startsAt,
+          endsAt: first.endsAt,
+        },
+      }),
+      ...rest.map((d, i) =>
+        prisma.event.create({
+          data: {
+            title: `${title} ${i + 2}/${total}`,
+            startsAt: d.startsAt,
+            endsAt: d.endsAt,
+          },
+        })
+      ),
+    ]);
+    return NextResponse.json(events);
+  }
+
   const startsAt = body.startsAt ? new Date(body.startsAt) : null;
   const endsAt = body.endsAt ? new Date(body.endsAt) : null;
 
   if (
-    !title ||
     !startsAt ||
     !endsAt ||
     Number.isNaN(startsAt.getTime()) ||
@@ -50,37 +85,10 @@ export async function PATCH(
     );
   }
 
-  let days: ReturnType<typeof parseDaysInput> = [];
-  if (body.days !== undefined) {
-    const parsed = parseDaysInput(body.days);
-    if (!parsed) {
-      return NextResponse.json({ error: "Invalid days data" }, { status: 400 });
-    }
-    days = parsed;
-  }
-
-  const event = await prisma.$transaction(async (tx) => {
-    await tx.eventDay.deleteMany({ where: { eventId: id } });
-    return tx.event.update({
-      where: { id },
-      data: {
-        title,
-        startsAt,
-        endsAt,
-        days:
-          days && days.length > 0
-            ? {
-                create: days.map((d) => ({
-                  startsAt: d.startsAt,
-                  endsAt: d.endsAt,
-                })),
-              }
-            : undefined,
-      },
-      include: { days: { orderBy: { startsAt: "asc" } } },
-    });
+  const event = await prisma.event.update({
+    where: { id },
+    data: { title, startsAt, endsAt },
   });
-
   return NextResponse.json(event);
 }
 

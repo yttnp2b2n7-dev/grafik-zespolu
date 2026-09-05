@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
-import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
 import { formatEventReportText, getEventDateTimeLabel } from "@/lib/eventReportText";
 
@@ -32,29 +30,6 @@ export function EventReport({ event }: { event: Event }) {
           {copied ? "Skopiowano" : "Kopiuj"}
         </button>
       </div>
-
-      {event.days.length > 1 && (
-        <div className="mt-4">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
-            Godziny w poszczególnych dniach
-          </p>
-          <ul className="flex flex-col gap-1.5">
-            {event.days.map((d) => (
-              <li
-                key={d.id}
-                className="flex items-center justify-between rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm"
-              >
-                <span className="text-foreground">
-                  {format(new Date(d.startsAt), "d MMMM yyyy, EEEE", { locale: pl })}
-                </span>
-                <span className="text-xs text-muted">
-                  {format(new Date(d.startsAt), "HH:mm")}–{format(new Date(d.endsAt), "HH:mm")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <div className="mt-4">
         <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
