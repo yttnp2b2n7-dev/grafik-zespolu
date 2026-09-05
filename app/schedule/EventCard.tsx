@@ -11,11 +11,13 @@ export function EventCard({
   event,
   onRemoveAssignment,
   onDelete,
+  onEdit,
   readOnly,
 }: {
   event: Event;
   onRemoveAssignment: (assignmentId: string) => void;
   onDelete: () => void;
+  onEdit: () => void;
   readOnly?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -79,12 +81,21 @@ export function EventCard({
       </div>
 
       {!readOnly && (
-        <Link
-          href={`/reports?event=${event.id}`}
-          className="mt-2 inline-block text-xs text-muted/70 underline-offset-2 transition hover:text-accent-hover hover:underline"
-        >
-          Raport
-        </Link>
+        <div className="mt-2 flex items-center gap-2 text-xs text-muted/70">
+          <button
+            onClick={onEdit}
+            className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+          >
+            Edytuj
+          </button>
+          <span>·</span>
+          <Link
+            href={`/reports?event=${event.id}`}
+            className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+          >
+            Raport
+          </Link>
+        </div>
       )}
     </div>
   );

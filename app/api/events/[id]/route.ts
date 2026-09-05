@@ -22,6 +22,39 @@ export async function GET(
   return NextResponse.json(event);
 }
 
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await req.json();
+  const title = typeof body.title === "string" ? body.title.trim() : "";
+  const startsAt = body.startsAt ? new Date(body.startsAt) : null;
+  const endsAt = body.endsAt ? new Date(body.endsAt) : null;
+
+  if (
+    !title ||
+    !startsAt ||
+    !endsAt ||
+    Number.isNaN(startsAt.getTime()) ||
+    Number.isNaN(endsAt.getTime())
+  ) {
+    return NextResponse.json({ error: "Invalid event data" }, { status: 400 });
+  }
+  if (endsAt <= startsAt) {
+    return NextResponse.json(
+      { error: "End time must be after start time" },
+      { status: 400 }
+    );
+  }
+
+  const event = await prisma.event.update({
+    where: { id },
+    data: { title, startsAt, endsAt },
+  });
+  return NextResponse.json(event);
+}
+
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

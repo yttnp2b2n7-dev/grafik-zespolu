@@ -1,27 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { format } from "date-fns";
+import type { Event } from "@/lib/types";
 
-export function AddEventModal({
+export function EventModal({
   defaultDate,
+  event,
   onClose,
-  onCreate,
+  onSubmit,
 }: {
   defaultDate: string;
+  event?: Event;
   onClose: () => void;
-  onCreate: (data: {
+  onSubmit: (data: {
     title: string;
     startsAt: string;
     endsAt: string;
   }) => Promise<void>;
 }) {
-  const [title, setTitle] = useState("");
-  const [startDate, setStartDate] = useState(defaultDate);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endDate, setEndDate] = useState(defaultDate);
-  const [endTime, setEndTime] = useState("10:00");
+  const initialStart = event ? new Date(event.startsAt) : null;
+  const initialEnd = event ? new Date(event.endsAt) : null;
+
+  const [title, setTitle] = useState(event?.title ?? "");
+  const [startDate, setStartDate] = useState(
+    initialStart ? format(initialStart, "yyyy-MM-dd") : defaultDate
+  );
+  const [startTime, setStartTime] = useState(
+    initialStart ? format(initialStart, "HH:mm") : "09:00"
+  );
+  const [endDate, setEndDate] = useState(
+    initialEnd ? format(initialEnd, "yyyy-MM-dd") : defaultDate
+  );
+  const [endTime, setEndTime] = useState(
+    initialEnd ? format(initialEnd, "HH:mm") : "10:00"
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const isEditing = Boolean(event);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -38,7 +55,7 @@ export function AddEventModal({
     }
     setSubmitting(true);
     try {
-      await onCreate({
+      await onSubmit({
         title: title.trim(),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
@@ -53,7 +70,7 @@ export function AddEventModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
         <h2 className="text-sm font-semibold text-foreground">
-          Nowe wydarzenie
+          {isEditing ? "Edytuj wydarzenie" : "Nowe wydarzenie"}
         </h2>
         <form onSubmit={handleSubmit} className="mt-4 space-y-3">
           <div>
@@ -117,7 +134,7 @@ export function AddEventModal({
               disabled={submitting}
               className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover disabled:opacity-50"
             >
-              Dodaj
+              {isEditing ? "Zapisz" : "Dodaj"}
             </button>
           </div>
         </form>

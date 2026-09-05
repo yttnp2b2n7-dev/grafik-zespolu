@@ -15,7 +15,7 @@ import { pl } from "date-fns/locale";
 import type { Assignment, Event, Person } from "@/lib/types";
 import { PersonTile } from "./PersonTile";
 import { EventCard } from "./EventCard";
-import { AddEventModal } from "./AddEventModal";
+import { EventModal } from "./EventModal";
 import { useSession } from "../session-context";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 
@@ -39,6 +39,7 @@ export default function SchedulePage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalDate, setModalDate] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
   const isDraggingRef = useRef(false);
 
@@ -165,6 +166,20 @@ export default function SchedulePage() {
     }
   }
 
+  async function updateEvent(
+    eventId: string,
+    data: { title: string; startsAt: string; endsAt: string }
+  ) {
+    const res = await fetch(`/api/events/${eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (res.ok) {
+      await loadEvents();
+    }
+  }
+
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
@@ -254,6 +269,7 @@ export default function SchedulePage() {
                         event={ev}
                         onRemoveAssignment={removeAssignment}
                         onDelete={() => deleteEvent(ev.id)}
+                        onEdit={() => setEditingEvent(ev)}
                         readOnly={!isAdmin}
                       />
                     ))}
@@ -278,10 +294,19 @@ export default function SchedulePage() {
       </DragOverlay>
 
       {isAdmin && modalDate && (
-        <AddEventModal
+        <EventModal
           defaultDate={modalDate}
           onClose={() => setModalDate(null)}
-          onCreate={createEvent}
+          onSubmit={createEvent}
+        />
+      )}
+
+      {isAdmin && editingEvent && (
+        <EventModal
+          defaultDate={format(new Date(editingEvent.startsAt), "yyyy-MM-dd")}
+          event={editingEvent}
+          onClose={() => setEditingEvent(null)}
+          onSubmit={(data) => updateEvent(editingEvent.id, data)}
         />
       )}
     </DndContext>
