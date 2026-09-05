@@ -11,14 +11,17 @@ export function EventCard({
   event,
   onRemoveAssignment,
   onDelete,
+  readOnly,
 }: {
   event: Event;
   onRemoveAssignment: (assignmentId: string) => void;
   onDelete: () => void;
+  readOnly?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `event-${event.id}`,
     data: { type: "event", eventId: event.id },
+    disabled: readOnly,
   });
 
   const start = new Date(event.startsAt);
@@ -47,13 +50,15 @@ export function EventCard({
           </p>
           <p className="text-xs text-muted">{timeLabel}</p>
         </div>
-        <button
-          onClick={onDelete}
-          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sm text-muted transition hover:bg-danger/15 hover:text-danger"
-          aria-label="Usuń wydarzenie"
-        >
-          ×
-        </button>
+        {!readOnly && (
+          <button
+            onClick={onDelete}
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-sm text-muted transition hover:bg-danger/15 hover:text-danger"
+            aria-label="Usuń wydarzenie"
+          >
+            ×
+          </button>
+        )}
       </div>
 
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -63,19 +68,24 @@ export function EventCard({
             assignment={a}
             eventId={event.id}
             onRemove={() => onRemoveAssignment(a.id)}
+            readOnly={readOnly}
           />
         ))}
         {event.assignments.length === 0 && (
-          <span className="text-xs text-muted/50">Przeciągnij tu osobę…</span>
+          <span className="text-xs text-muted/50">
+            {readOnly ? "Brak przypisanych osób" : "Przeciągnij tu osobę…"}
+          </span>
         )}
       </div>
 
-      <Link
-        href={`/reports?event=${event.id}`}
-        className="mt-2 inline-block text-xs text-muted/70 underline-offset-2 transition hover:text-accent-hover hover:underline"
-      >
-        Raport
-      </Link>
+      {!readOnly && (
+        <Link
+          href={`/reports?event=${event.id}`}
+          className="mt-2 inline-block text-xs text-muted/70 underline-offset-2 transition hover:text-accent-hover hover:underline"
+        >
+          Raport
+        </Link>
+      )}
     </div>
   );
 }

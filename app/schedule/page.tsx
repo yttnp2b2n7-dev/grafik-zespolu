@@ -16,6 +16,8 @@ import type { Assignment, Event, Person } from "@/lib/types";
 import { PersonTile } from "./PersonTile";
 import { EventCard } from "./EventCard";
 import { AddEventModal } from "./AddEventModal";
+import { useSession } from "../session-context";
+import { fetchJsonOrNull } from "@/lib/clientFetch";
 
 const DAY_LABELS = [
   "Poniedziałek",
@@ -28,6 +30,8 @@ const DAY_LABELS = [
 ];
 
 export default function SchedulePage() {
+  const { role } = useSession();
+  const isAdmin = role === "admin";
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
@@ -43,21 +47,21 @@ export default function SchedulePage() {
   );
 
   const loadPeople = useCallback(async () => {
-    const res = await fetch("/api/people");
-    setPeople(await res.json());
+    const data = await fetchJsonOrNull<Person[]>("/api/people");
+    if (data) setPeople(data);
   }, []);
 
   const loadEvents = useCallback(async () => {
     const weekEnd = addDays(weekStart, 7);
-    const res = await fetch(
+    const data = await fetchJsonOrNull<Event[]>(
       `/api/events?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`
     );
-    setEvents(await res.json());
+    if (data) setEvents(data);
   }, [weekStart]);
 
   useEffect(() => {
-    loadPeople();
-  }, [loadPeople]);
+    if (isAdmin) loadPeople();
+  }, [isAdmin, loadPeople]);
 
   useEffect(() => {
     setLoading(true);
@@ -67,11 +71,11 @@ export default function SchedulePage() {
   useEffect(() => {
     const interval = setInterval(() => {
       if (isDraggingRef.current) return;
-      loadPeople();
+      if (isAdmin) loadPeople();
       loadEvents();
     }, 5000);
     return () => clearInterval(interval);
-  }, [loadPeople, loadEvents]);
+  }, [isAdmin, loadPeople, loadEvents]);
 
   function handleDragStart(e: DragStartEvent) {
     isDraggingRef.current = true;
@@ -199,30 +203,36 @@ export default function SchedulePage() {
               Dziś
             </button>
           </div>
-          <button
-            onClick={() => setModalDate(format(weekStart, "yyyy-MM-dd"))}
-            className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
-          >
-            + Dodaj wydarzenie
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setModalDate(format(weekStart, "yyyy-MM-dd"))}
+              className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+            >
+              + Dodaj wydarzenie
+            </button>
+          )}
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[200px_1fr]">
-          <aside className="h-max rounded-lg border border-border-subtle bg-surface/50 p-3 lg:sticky lg:top-6">
-            <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
-              Ludzie
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {people.map((person) => (
-                <PersonTile key={person.id} person={person} />
-              ))}
-              {people.length === 0 && (
-                <p className="px-1 text-xs text-muted">
-                  Dodaj osoby w zakładce „Ludzie”.
-                </p>
-              )}
-            </div>
-          </aside>
+        <div
+          className={`mt-6 grid grid-cols-1 gap-6 ${isAdmin ? "lg:grid-cols-[200px_1fr]" : ""}`}
+        >
+          {isAdmin && (
+            <aside className="h-max rounded-lg border border-border-subtle bg-surface/50 p-3 lg:sticky lg:top-6">
+              <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
+                Ludzie
+              </p>
+              <div className="flex flex-col gap-1.5">
+                {people.map((person) => (
+                  <PersonTile key={person.id} person={person} />
+                ))}
+                {people.length === 0 && (
+                  <p className="px-1 text-xs text-muted">
+                    Dodaj osoby w zakładce „Ludzie”.
+                  </p>
+                )}
+              </div>
+            </aside>
+          )}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             {days.map((day, i) => (
@@ -244,14 +254,17 @@ export default function SchedulePage() {
                         event={ev}
                         onRemoveAssignment={removeAssignment}
                         onDelete={() => deleteEvent(ev.id)}
+                        readOnly={!isAdmin}
                       />
                     ))}
-                  <button
-                    onClick={() => setModalDate(format(day, "yyyy-MM-dd"))}
-                    className="rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
-                  >
-                    + wydarzenie
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setModalDate(format(day, "yyyy-MM-dd"))}
+                      className="rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
+                    >
+                      + wydarzenie
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -264,7 +277,7 @@ export default function SchedulePage() {
         {draggedPerson ? <PersonTile person={draggedPerson} dragging /> : null}
       </DragOverlay>
 
-      {modalDate && (
+      {isAdmin && modalDate && (
         <AddEventModal
           defaultDate={modalDate}
           onClose={() => setModalDate(null)}

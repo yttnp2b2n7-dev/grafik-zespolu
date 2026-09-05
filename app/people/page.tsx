@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { Person, Skill } from "@/lib/types";
+import { fetchJsonOrNull } from "@/lib/clientFetch";
 
 const PALETTE = [
   "#6366f1",
@@ -23,12 +24,12 @@ export default function PeoplePage() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadAll() {
-    const [peopleRes, skillsRes] = await Promise.all([
-      fetch("/api/people"),
-      fetch("/api/skills"),
+    const [peopleData, skillsData] = await Promise.all([
+      fetchJsonOrNull<Person[]>("/api/people"),
+      fetchJsonOrNull<Skill[]>("/api/skills"),
     ]);
-    setPeople(await peopleRes.json());
-    setSkills(await skillsRes.json());
+    if (peopleData) setPeople(peopleData);
+    if (skillsData) setSkills(skillsData);
     setLoading(false);
   }
 

@@ -8,6 +8,7 @@ import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
 import { EventReport } from "./EventReport";
 import { formatWeekReportText } from "@/lib/eventReportText";
+import { fetchJsonOrNull } from "@/lib/clientFetch";
 
 export function ReportsContent() {
   const searchParams = useSearchParams();
@@ -87,10 +88,10 @@ function WeekReport() {
 
   const loadEvents = useCallback(async () => {
     const weekEnd = addDays(weekStart, 7);
-    const res = await fetch(
+    const data = await fetchJsonOrNull<Event[]>(
       `/api/events?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`
     );
-    setEvents(await res.json());
+    if (data) setEvents(data);
   }, [weekStart]);
 
   useEffect(() => {
