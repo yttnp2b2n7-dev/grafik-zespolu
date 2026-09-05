@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseDaysInput } from "@/lib/eventDaysValidation";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
+      days: { orderBy: { startsAt: "asc" } },
     },
     orderBy: { startsAt: "asc" },
   });
@@ -49,8 +51,26 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  let days: ReturnType<typeof parseDaysInput> = [];
+  if (body.days !== undefined) {
+    const parsed = parseDaysInput(body.days);
+    if (!parsed) {
+      return NextResponse.json({ error: "Invalid days data" }, { status: 400 });
+    }
+    days = parsed;
+  }
+
   const event = await prisma.event.create({
-    data: { title, startsAt, endsAt, color },
+    data: {
+      title,
+      startsAt,
+      endsAt,
+      color,
+      ...(days && days.length > 0
+        ? { days: { create: days.map((d) => ({ startsAt: d.startsAt, endsAt: d.endsAt })) } }
+        : {}),
+    },
+    include: { days: { orderBy: { startsAt: "asc" } } },
   });
   return NextResponse.json(event, { status: 201 });
 }

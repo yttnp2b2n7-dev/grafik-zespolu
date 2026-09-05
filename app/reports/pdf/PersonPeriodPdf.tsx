@@ -70,7 +70,7 @@ export function PersonPeriodPdf({
               </Text>
             </View>
             {shifts.map((s) => (
-              <View key={s.eventId} style={styles.row} wrap={false}>
+              <View key={s.key} style={styles.row} wrap={false}>
                 <Text style={[styles.cellText, styles.colDate]}>
                   {format(s.start, "d MMMM yyyy, EEEE", { locale: pl })}
                 </Text>

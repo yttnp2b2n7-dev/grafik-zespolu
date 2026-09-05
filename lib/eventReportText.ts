@@ -16,11 +16,23 @@ export function formatEventReportText(event: Event): string {
   const { dateLabel, timeLabel } = getEventDateTimeLabel(event);
   const people = event.assignments.map((a) => a.person.name).join(", ");
 
-  return [
-    event.title,
-    `${dateLabel}, ${timeLabel}`,
-    `Przypisani: ${people || "brak"}`,
-  ].join("\n");
+  const lines = [event.title];
+
+  if (event.days.length > 1) {
+    lines.push(dateLabel);
+    for (const d of event.days) {
+      const start = new Date(d.startsAt);
+      const end = new Date(d.endsAt);
+      lines.push(
+        `${format(start, "d MMMM yyyy, EEEE", { locale: pl })}, ${format(start, "HH:mm")}–${format(end, "HH:mm")}`
+      );
+    }
+  } else {
+    lines.push(`${dateLabel}, ${timeLabel}`);
+  }
+
+  lines.push(`Przypisani: ${people || "brak"}`);
+  return lines.join("\n");
 }
 
 export function formatWeekReportText(events: Event[], weekLabel: string): string {

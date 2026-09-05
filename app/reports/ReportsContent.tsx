@@ -334,7 +334,7 @@ function PeriodReport() {
               <ul className="mt-3 flex flex-col gap-1.5">
                 {shifts.map((s) => (
                   <li
-                    key={s.eventId}
+                    key={s.key}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm"
                   >
                     <span className="text-foreground">{s.title}</span>

@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { format } from "date-fns";
+import { useEffect, useState } from "react";
+import { eachDayOfInterval, format } from "date-fns";
+import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
+
+type DayTime = { start: string; end: string };
 
 export function EventModal({
   defaultDate,
@@ -17,6 +20,7 @@ export function EventModal({
     title: string;
     startsAt: string;
     endsAt: string;
+    days?: { startsAt: string; endsAt: string }[];
   }) => Promise<void>;
 }) {
   const initialStart = event ? new Date(event.startsAt) : null;
@@ -38,7 +42,54 @@ export function EventModal({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [dayTimes, setDayTimes] = useState<Record<string, DayTime>>(() => {
+    const map: Record<string, DayTime> = {};
+    if (event) {
+      for (const d of event.days) {
+        const key = format(new Date(d.startsAt), "yyyy-MM-dd");
+        map[key] = {
+          start: format(new Date(d.startsAt), "HH:mm"),
+          end: format(new Date(d.endsAt), "HH:mm"),
+        };
+      }
+    }
+    return map;
+  });
+
   const isEditing = Boolean(event);
+
+  let dateRange: Date[] = [];
+  try {
+    if (startDate && endDate && startDate <= endDate) {
+      dateRange = eachDayOfInterval({
+        start: new Date(`${startDate}T00:00`),
+        end: new Date(`${endDate}T00:00`),
+      });
+    }
+  } catch {
+    dateRange = [];
+  }
+  const isMultiDay = dateRange.length > 1;
+
+  useEffect(() => {
+    if (!isMultiDay) return;
+    setDayTimes((prev) => {
+      const next: Record<string, DayTime> = {};
+      for (const day of dateRange) {
+        const key = format(day, "yyyy-MM-dd");
+        next[key] = prev[key] ?? { start: startTime, end: endTime };
+      }
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, isMultiDay]);
+
+  function updateDayTime(key: string, field: "start" | "end", value: string) {
+    setDayTimes((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value },
+    }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,6 +98,40 @@ export function EventModal({
       setError("Podaj tytuł wydarzenia");
       return;
     }
+
+    if (isMultiDay) {
+      const days: { startsAt: string; endsAt: string }[] = [];
+      for (const day of dateRange) {
+        const key = format(day, "yyyy-MM-dd");
+        const dt = dayTimes[key] ?? { start: startTime, end: endTime };
+        const dayStart = new Date(`${key}T${dt.start}`);
+        const dayEnd = new Date(`${key}T${dt.end}`);
+        if (dayEnd <= dayStart) {
+          setError(
+            `Godzina końca musi być po początku (${format(day, "d MMM", { locale: pl })})`
+          );
+          return;
+        }
+        days.push({
+          startsAt: dayStart.toISOString(),
+          endsAt: dayEnd.toISOString(),
+        });
+      }
+      setSubmitting(true);
+      try {
+        await onSubmit({
+          title: title.trim(),
+          startsAt: days[0].startsAt,
+          endsAt: days[days.length - 1].endsAt,
+          days,
+        });
+        onClose();
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     const startsAt = new Date(`${startDate}T${startTime}`);
     const endsAt = new Date(`${endDate}T${endTime}`);
     if (endsAt <= startsAt) {
@@ -59,6 +144,7 @@ export function EventModal({
         title: title.trim(),
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
+        days: [],
       });
       onClose();
     } finally {
@@ -68,7 +154,7 @@ export function EventModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
+      <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
         <h2 className="text-sm font-semibold text-foreground">
           {isEditing ? "Edytuj wydarzenie" : "Nowe wydarzenie"}
         </h2>
@@ -93,7 +179,9 @@ export function EventModal({
               />
             </div>
             <div>
-              <label className="text-xs text-muted">Godzina początku</label>
+              <label className="text-xs text-muted">
+                {isMultiDay ? "Domyślna godzina początku" : "Godzina początku"}
+              </label>
               <input
                 type="time"
                 value={startTime}
@@ -111,7 +199,9 @@ export function EventModal({
               />
             </div>
             <div>
-              <label className="text-xs text-muted">Godzina końca</label>
+              <label className="text-xs text-muted">
+                {isMultiDay ? "Domyślna godzina końca" : "Godzina końca"}
+              </label>
               <input
                 type="time"
                 value={endTime}
@@ -120,6 +210,42 @@ export function EventModal({
               />
             </div>
           </div>
+
+          {isMultiDay && (
+            <div>
+              <label className="text-xs text-muted">Godziny dla każdego dnia</label>
+              <div className="mt-1 flex flex-col gap-1.5">
+                {dateRange.map((day) => {
+                  const key = format(day, "yyyy-MM-dd");
+                  const dt = dayTimes[key] ?? { start: startTime, end: endTime };
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center gap-2 rounded-md border border-border-subtle bg-background px-2 py-1.5"
+                    >
+                      <span className="w-16 shrink-0 text-xs text-muted">
+                        {format(day, "d MMM", { locale: pl })}
+                      </span>
+                      <input
+                        type="time"
+                        value={dt.start}
+                        onChange={(e) => updateDayTime(key, "start", e.target.value)}
+                        className="w-full rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs text-foreground focus:border-accent focus:outline-none"
+                      />
+                      <span className="text-xs text-muted">–</span>
+                      <input
+                        type="time"
+                        value={dt.end}
+                        onChange={(e) => updateDayTime(key, "end", e.target.value)}
+                        className="w-full rounded-md border border-border-subtle bg-surface px-2 py-1 text-xs text-foreground focus:border-accent focus:outline-none"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button

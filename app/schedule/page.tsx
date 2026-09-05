@@ -192,6 +192,7 @@ export default function SchedulePage() {
     title: string;
     startsAt: string;
     endsAt: string;
+    days?: { startsAt: string; endsAt: string }[];
   }) {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -205,7 +206,12 @@ export default function SchedulePage() {
 
   async function updateEvent(
     eventId: string,
-    data: { title: string; startsAt: string; endsAt: string }
+    data: {
+      title: string;
+      startsAt: string;
+      endsAt: string;
+      days?: { startsAt: string; endsAt: string }[];
+    }
   ) {
     const res = await fetch(`/api/events/${eventId}`, {
       method: "PATCH",

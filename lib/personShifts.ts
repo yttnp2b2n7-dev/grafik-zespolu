@@ -1,6 +1,7 @@
 import type { Event } from "@/lib/types";
 
 export type PersonShift = {
+  key: string;
   eventId: string;
   title: string;
   start: Date;
@@ -12,20 +13,39 @@ export function computePersonShifts(
   events: Event[],
   personId: string
 ): PersonShift[] {
-  return events
-    .filter((e) => e.assignments.some((a) => a.person.id === personId))
-    .map((e) => {
+  const shifts: PersonShift[] = [];
+
+  for (const e of events) {
+    if (!e.assignments.some((a) => a.person.id === personId)) continue;
+
+    if (e.days.length > 0) {
+      for (const d of e.days) {
+        const start = new Date(d.startsAt);
+        const end = new Date(d.endsAt);
+        shifts.push({
+          key: d.id,
+          eventId: e.id,
+          title: e.title,
+          start,
+          end,
+          minutes: Math.round((end.getTime() - start.getTime()) / 60000),
+        });
+      }
+    } else {
       const start = new Date(e.startsAt);
       const end = new Date(e.endsAt);
-      return {
+      shifts.push({
+        key: e.id,
         eventId: e.id,
         title: e.title,
         start,
         end,
         minutes: Math.round((end.getTime() - start.getTime()) / 60000),
-      };
-    })
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+      });
+    }
+  }
+
+  return shifts.sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
 export function totalMinutes(shifts: PersonShift[]): number {
