@@ -327,7 +327,7 @@ export default function SchedulePage() {
                 ))
               )}
 
-              {days.map((day, i) => {
+              {days.flatMap((day, i) => {
                 const dayEvents = singleDayEvents.filter((ev) =>
                   isSameDay(new Date(ev.startsAt), day)
                 );
@@ -343,32 +343,41 @@ export default function SchedulePage() {
                 });
                 const startRow = lastMultiRow + 3;
 
-                return (
+                const items = dayEvents.map((ev, evIdx) => (
                   <div
-                    key={`day-${i}`}
-                    className="flex flex-col gap-2"
-                    style={{ gridColumn: i + 1, gridRow: startRow }}
+                    key={ev.id}
+                    style={{ gridColumn: i + 1, gridRow: startRow + evIdx }}
                   >
-                    {dayEvents.map((ev) => (
-                      <EventCard
-                        key={ev.id}
-                        event={ev}
-                        onRemoveAssignment={removeAssignment}
-                        onDelete={() => deleteEvent(ev.id)}
-                        onEdit={() => setEditingEvent(ev)}
-                        readOnly={!isAdmin}
-                      />
-                    ))}
-                    {isAdmin && (
+                    <EventCard
+                      event={ev}
+                      onRemoveAssignment={removeAssignment}
+                      onDelete={() => deleteEvent(ev.id)}
+                      onEdit={() => setEditingEvent(ev)}
+                      readOnly={!isAdmin}
+                    />
+                  </div>
+                ));
+
+                if (isAdmin) {
+                  items.push(
+                    <div
+                      key={`add-${i}`}
+                      style={{
+                        gridColumn: i + 1,
+                        gridRow: startRow + dayEvents.length,
+                      }}
+                    >
                       <button
                         onClick={() => setModalDate(format(day, "yyyy-MM-dd"))}
-                        className="rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
+                        className="w-full rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
                       >
                         + wydarzenie
                       </button>
-                    )}
-                  </div>
-                );
+                    </div>
+                  );
+                }
+
+                return items;
               })}
             </div>
           </div>
