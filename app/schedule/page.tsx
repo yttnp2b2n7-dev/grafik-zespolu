@@ -291,59 +291,74 @@ export default function SchedulePage() {
           )}
 
           <div className="overflow-x-auto">
-            <div className="min-w-[1050px]">
-              <div className="grid grid-cols-7 gap-3">
-                {days.map((day, i) => (
-                  <div key={i} className="px-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                      {DAY_LABELS[i]}
-                    </p>
-                    <p className="text-xs text-muted/70">
-                      {format(day, "d MMM", { locale: pl })}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {multiDayRows.length > 0 && (
-                <div className="mt-2 grid grid-cols-7 gap-2">
-                  {multiDayRows.map((row, rowIdx) =>
-                    row.map(({ event, startCol, endCol }) => (
-                      <div
-                        key={event.id}
-                        style={{
-                          gridColumn: `${startCol + 1} / ${endCol + 2}`,
-                          gridRow: rowIdx + 1,
-                        }}
-                      >
-                        <EventCard
-                          event={event}
-                          onRemoveAssignment={removeAssignment}
-                          onDelete={() => deleteEvent(event.id)}
-                          onEdit={() => setEditingEvent(event)}
-                          readOnly={!isAdmin}
-                        />
-                      </div>
-                    ))
-                  )}
+            <div className="grid min-w-[1050px] grid-cols-7 gap-3">
+              {days.map((day, i) => (
+                <div
+                  key={`header-${i}`}
+                  className="px-1"
+                  style={{ gridColumn: i + 1, gridRow: 1 }}
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                    {DAY_LABELS[i]}
+                  </p>
+                  <p className="text-xs text-muted/70">
+                    {format(day, "d MMM", { locale: pl })}
+                  </p>
                 </div>
+              ))}
+
+              {multiDayRows.map((row, rowIdx) =>
+                row.map(({ event, startCol, endCol }) => (
+                  <div
+                    key={event.id}
+                    style={{
+                      gridColumn: `${startCol + 1} / ${endCol + 2}`,
+                      gridRow: rowIdx + 2,
+                    }}
+                  >
+                    <EventCard
+                      event={event}
+                      onRemoveAssignment={removeAssignment}
+                      onDelete={() => deleteEvent(event.id)}
+                      onEdit={() => setEditingEvent(event)}
+                      readOnly={!isAdmin}
+                    />
+                  </div>
+                ))
               )}
 
-              <div className="mt-2 grid grid-cols-7 gap-3">
-                {days.map((day, i) => (
-                  <div key={i} className="flex flex-col gap-2">
-                    {singleDayEvents
-                      .filter((ev) => isSameDay(new Date(ev.startsAt), day))
-                      .map((ev) => (
-                        <EventCard
-                          key={ev.id}
-                          event={ev}
-                          onRemoveAssignment={removeAssignment}
-                          onDelete={() => deleteEvent(ev.id)}
-                          onEdit={() => setEditingEvent(ev)}
-                          readOnly={!isAdmin}
-                        />
-                      ))}
+              {days.map((day, i) => {
+                const dayEvents = singleDayEvents.filter((ev) =>
+                  isSameDay(new Date(ev.startsAt), day)
+                );
+                let lastMultiRow = -1;
+                multiDayRows.forEach((row, rowIdx) => {
+                  if (
+                    row.some(
+                      (item) => item.startCol <= i && i <= item.endCol
+                    )
+                  ) {
+                    lastMultiRow = rowIdx;
+                  }
+                });
+                const startRow = lastMultiRow + 3;
+
+                return (
+                  <div
+                    key={`day-${i}`}
+                    className="flex flex-col gap-2"
+                    style={{ gridColumn: i + 1, gridRow: startRow }}
+                  >
+                    {dayEvents.map((ev) => (
+                      <EventCard
+                        key={ev.id}
+                        event={ev}
+                        onRemoveAssignment={removeAssignment}
+                        onDelete={() => deleteEvent(ev.id)}
+                        onEdit={() => setEditingEvent(ev)}
+                        readOnly={!isAdmin}
+                      />
+                    ))}
                     {isAdmin && (
                       <button
                         onClick={() => setModalDate(format(day, "yyyy-MM-dd"))}
@@ -353,8 +368,8 @@ export default function SchedulePage() {
                       </button>
                     )}
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
         </div>
