@@ -10,7 +10,15 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { addDays, addWeeks, format, isSameDay, startOfWeek, subWeeks } from "date-fns";
+import {
+  addDays,
+  addWeeks,
+  differenceInCalendarDays,
+  format,
+  isSameDay,
+  startOfWeek,
+  subWeeks,
+} from "date-fns";
 import { pl } from "date-fns/locale";
 import type { Assignment, Event, Person } from "@/lib/types";
 import { PersonTile } from "./PersonTile";
@@ -28,6 +36,35 @@ const DAY_LABELS = [
   "Sobota",
   "Niedziela",
 ];
+
+type PackedEvent = { event: Event; startCol: number; endCol: number };
+
+function packMultiDayEvents(events: Event[], weekStart: Date): PackedEvent[][] {
+  const items: PackedEvent[] = events
+    .filter((ev) => !isSameDay(new Date(ev.startsAt), new Date(ev.endsAt)))
+    .map((ev) => {
+      const start = new Date(ev.startsAt);
+      const end = new Date(ev.endsAt);
+      const startCol = Math.max(0, differenceInCalendarDays(start, weekStart));
+      const endCol = Math.min(6, differenceInCalendarDays(end, weekStart));
+      return { event: ev, startCol, endCol };
+    })
+    .filter((item) => item.startCol <= item.endCol)
+    .sort((a, b) => a.startCol - b.startCol);
+
+  const rows: PackedEvent[][] = [];
+  for (const item of items) {
+    const row = rows.find(
+      (r) => r.length === 0 || r[r.length - 1].endCol < item.startCol
+    );
+    if (row) {
+      row.push(item);
+    } else {
+      rows.push([item]);
+    }
+  }
+  return rows;
+}
 
 export default function SchedulePage() {
   const { role } = useSession();
@@ -181,6 +218,10 @@ export default function SchedulePage() {
   }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const singleDayEvents = events.filter((ev) =>
+    isSameDay(new Date(ev.startsAt), new Date(ev.endsAt))
+  );
+  const multiDayRows = packMultiDayEvents(events, weekStart);
 
   return (
     <DndContext
@@ -249,41 +290,72 @@ export default function SchedulePage() {
             </aside>
           )}
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-            {days.map((day, i) => (
-              <div key={i} className="min-w-0">
-                <div className="mb-2 px-1">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                    {DAY_LABELS[i]}
-                  </p>
-                  <p className="text-xs text-muted/70">
-                    {format(day, "d MMM", { locale: pl })}
-                  </p>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {events
-                    .filter((ev) => isSameDay(new Date(ev.startsAt), day))
-                    .map((ev) => (
-                      <EventCard
-                        key={ev.id}
-                        event={ev}
-                        onRemoveAssignment={removeAssignment}
-                        onDelete={() => deleteEvent(ev.id)}
-                        onEdit={() => setEditingEvent(ev)}
-                        readOnly={!isAdmin}
-                      />
-                    ))}
-                  {isAdmin && (
-                    <button
-                      onClick={() => setModalDate(format(day, "yyyy-MM-dd"))}
-                      className="rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
-                    >
-                      + wydarzenie
-                    </button>
+          <div className="overflow-x-auto">
+            <div className="min-w-[1050px]">
+              <div className="grid grid-cols-7 gap-3">
+                {days.map((day, i) => (
+                  <div key={i} className="px-1">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                      {DAY_LABELS[i]}
+                    </p>
+                    <p className="text-xs text-muted/70">
+                      {format(day, "d MMM", { locale: pl })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {multiDayRows.length > 0 && (
+                <div className="mt-2 grid grid-cols-7 gap-2">
+                  {multiDayRows.map((row, rowIdx) =>
+                    row.map(({ event, startCol, endCol }) => (
+                      <div
+                        key={event.id}
+                        style={{
+                          gridColumn: `${startCol + 1} / ${endCol + 2}`,
+                          gridRow: rowIdx + 1,
+                        }}
+                      >
+                        <EventCard
+                          event={event}
+                          onRemoveAssignment={removeAssignment}
+                          onDelete={() => deleteEvent(event.id)}
+                          onEdit={() => setEditingEvent(event)}
+                          readOnly={!isAdmin}
+                        />
+                      </div>
+                    ))
                   )}
                 </div>
+              )}
+
+              <div className="mt-2 grid grid-cols-7 gap-3">
+                {days.map((day, i) => (
+                  <div key={i} className="flex flex-col gap-2">
+                    {singleDayEvents
+                      .filter((ev) => isSameDay(new Date(ev.startsAt), day))
+                      .map((ev) => (
+                        <EventCard
+                          key={ev.id}
+                          event={ev}
+                          onRemoveAssignment={removeAssignment}
+                          onDelete={() => deleteEvent(ev.id)}
+                          onEdit={() => setEditingEvent(ev)}
+                          readOnly={!isAdmin}
+                        />
+                      ))}
+                    {isAdmin && (
+                      <button
+                        onClick={() => setModalDate(format(day, "yyyy-MM-dd"))}
+                        className="rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
+                      >
+                        + wydarzenie
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
         {loading && <p className="mt-4 text-xs text-muted">Ładowanie…</p>}
