@@ -82,6 +82,18 @@ function packEventGroups(events: Event[], weekStart: Date): GroupItem[][] {
   return rows;
 }
 
+function findPreviousDayEvent(event: Event, events: Event[]): Event | null {
+  if (!event.groupId) return null;
+  const siblings = events
+    .filter((e) => e.groupId === event.groupId)
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+    );
+  const idx = siblings.findIndex((e) => e.id === event.id);
+  if (idx <= 0) return null;
+  return siblings[idx - 1];
+}
+
 export default function SchedulePage() {
   const { role } = useSession();
   const isAdmin = role === "admin";
@@ -187,6 +199,32 @@ export default function SchedulePage() {
         }
         return ev;
       })
+    );
+  }
+
+  async function copyCrewFromPreviousDay(eventId: string) {
+    const event = events.find((ev) => ev.id === eventId);
+    const previous = event ? findPreviousDayEvent(event, events) : null;
+    if (!event || !previous) return;
+
+    const toRemove = event.assignments;
+    const personIds = previous.assignments.map((a) => a.personId);
+
+    await Promise.all(
+      toRemove.map((a) => fetch(`/api/assignments/${a.id}`, { method: "DELETE" }))
+    );
+    const created = await Promise.all(
+      personIds.map((personId) =>
+        fetch("/api/assignments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ eventId, personId }),
+        }).then((res) => res.json() as Promise<Assignment>)
+      )
+    );
+
+    setEvents((prev) =>
+      prev.map((ev) => (ev.id === eventId ? { ...ev, assignments: created } : ev))
     );
   }
 
@@ -352,20 +390,28 @@ export default function SchedulePage() {
               ))}
 
               {groupRows.map((row, rowIdx) =>
-                row.map(({ event, col }) => (
-                  <div
-                    key={event.id}
-                    style={{ gridColumn: col + 1, gridRow: rowIdx + 2 }}
-                  >
-                    <EventCard
-                      event={event}
-                      onRemoveAssignment={removeAssignment}
-                      onDelete={() => deleteEvent(event.id)}
-                      onEdit={() => setEditingEvent(event)}
-                      readOnly={!isAdmin}
-                    />
-                  </div>
-                ))
+                row.map(({ event, col }) => {
+                  const previousDayEvent = findPreviousDayEvent(event, events);
+                  return (
+                    <div
+                      key={event.id}
+                      style={{ gridColumn: col + 1, gridRow: rowIdx + 2 }}
+                    >
+                      <EventCard
+                        event={event}
+                        onRemoveAssignment={removeAssignment}
+                        onDelete={() => deleteEvent(event.id)}
+                        onEdit={() => setEditingEvent(event)}
+                        onCopyFromPreviousDay={
+                          previousDayEvent
+                            ? () => copyCrewFromPreviousDay(event.id)
+                            : undefined
+                        }
+                        readOnly={!isAdmin}
+                      />
+                    </div>
+                  );
+                })
               )}
 
               {days.flatMap((day, i) => {

@@ -13,12 +13,14 @@ export function EventCard({
   onRemoveAssignment,
   onDelete,
   onEdit,
+  onCopyFromPreviousDay,
   readOnly,
 }: {
   event: Event;
   onRemoveAssignment: (assignmentId: string) => void;
   onDelete: () => void;
   onEdit: () => void;
+  onCopyFromPreviousDay?: () => void;
   readOnly?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -108,7 +110,7 @@ export function EventCard({
       </div>
 
       {!readOnly && (
-        <div className="mt-2 flex items-center gap-2 text-xs text-muted/70">
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted/70">
           <button
             onClick={onEdit}
             className="underline-offset-2 transition hover:text-accent-hover hover:underline"
@@ -122,6 +124,17 @@ export function EventCard({
           >
             Raport
           </Link>
+          {onCopyFromPreviousDay && (
+            <>
+              <span>·</span>
+              <button
+                onClick={onCopyFromPreviousDay}
+                className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+              >
+                Kopiuj ekipę z poprzedniego dnia
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
