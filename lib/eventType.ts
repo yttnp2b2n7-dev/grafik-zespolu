@@ -31,9 +31,15 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   ZALADUNEK: "#eab308", // yellow
 };
 
-export function parseEventTypeInput(value: unknown): EventType | null {
-  return typeof value === "string" &&
-    (EVENT_TYPE_OPTIONS as string[]).includes(value)
-    ? (value as EventType)
-    : null;
+function isEventType(value: unknown): value is EventType {
+  return (
+    typeof value === "string" && (EVENT_TYPE_OPTIONS as string[]).includes(value)
+  );
+}
+
+// An event can now carry any combination of the four types at once.
+export function parseEventTypesInput(value: unknown): EventType[] {
+  if (!Array.isArray(value)) return [];
+  const unique = new Set(value.filter(isEventType));
+  return EVENT_TYPE_OPTIONS.filter((type) => unique.has(type));
 }

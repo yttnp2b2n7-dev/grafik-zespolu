@@ -45,7 +45,7 @@ model Event {
   endsAt            DateTime
   color             String?
   groupId           String?
-  eventType         EventType?
+  eventTypes        EventType[]  @default([])
   loadingEnabled    Boolean      @default(false)
   loadingTime       String?
   transportEnabled  Boolean      @default(false)

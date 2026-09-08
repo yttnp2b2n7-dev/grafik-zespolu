@@ -34,7 +34,7 @@ export type Event = {
   endsAt: string;
   color: string | null;
   groupId: string | null;
-  eventType: EventType | null;
+  eventTypes: EventType[];
   loadingEnabled: boolean;
   loadingTime: string | null;
   transportEnabled: boolean;

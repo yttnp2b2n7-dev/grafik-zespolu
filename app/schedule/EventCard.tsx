@@ -67,14 +67,19 @@ export function EventCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-2">
-          {event.eventType && (
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-base font-black leading-none text-white"
-              style={{ backgroundColor: EVENT_TYPE_COLORS[event.eventType] }}
-              title={EVENT_TYPE_LABELS[event.eventType]}
-              aria-label={EVENT_TYPE_LABELS[event.eventType]}
-            >
-              {EVENT_TYPE_LETTERS[event.eventType]}
+          {event.eventTypes.length > 0 && (
+            <span className="flex shrink-0 gap-1">
+              {event.eventTypes.map((type) => (
+                <span
+                  key={type}
+                  className="flex h-7 w-7 items-center justify-center rounded-md text-base font-black leading-none text-white"
+                  style={{ backgroundColor: EVENT_TYPE_COLORS[type] }}
+                  title={EVENT_TYPE_LABELS[type]}
+                  aria-label={EVENT_TYPE_LABELS[type]}
+                >
+                  {EVENT_TYPE_LETTERS[type]}
+                </span>
+              ))}
             </span>
           )}
           <div className="min-w-0 flex-1">

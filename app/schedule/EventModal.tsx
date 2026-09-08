@@ -28,7 +28,7 @@ export function EventModal({
     startsAt: string;
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
-    eventType: EventType | null;
+    eventTypes: EventType[];
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
@@ -39,9 +39,15 @@ export function EventModal({
   const initialEnd = event ? new Date(event.endsAt) : null;
 
   const [title, setTitle] = useState(event?.title ?? "");
-  const [eventType, setEventType] = useState<EventType | null>(
-    event?.eventType ?? null
+  const [eventTypes, setEventTypes] = useState<EventType[]>(
+    event?.eventTypes ?? []
   );
+
+  function toggleEventType(type: EventType) {
+    setEventTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
+  }
   const [loadingEnabled, setLoadingEnabled] = useState(
     event?.loadingEnabled ?? false
   );
@@ -137,7 +143,7 @@ export function EventModal({
           startsAt: days[0].startsAt,
           endsAt: days[days.length - 1].endsAt,
           days,
-          eventType,
+          eventTypes,
           loadingEnabled,
           loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
           transportEnabled,
@@ -165,7 +171,7 @@ export function EventModal({
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
         days: [],
-        eventType,
+        eventTypes,
         loadingEnabled,
         loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
         transportEnabled,
@@ -197,16 +203,16 @@ export function EventModal({
           </div>
 
           <div>
-            <label className="text-xs text-muted">Rodzaj</label>
+            <label className="text-xs text-muted">Rodzaj (można wybrać kilka)</label>
             <div className="mt-1 flex gap-1.5">
               {EVENT_TYPE_OPTIONS.map((type) => {
-                const active = eventType === type;
+                const active = eventTypes.includes(type);
                 const color = EVENT_TYPE_COLORS[type];
                 return (
                   <button
                     key={type}
                     type="button"
-                    onClick={() => setEventType(active ? null : type)}
+                    onClick={() => toggleEventType(type)}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition"
                     style={
                       active

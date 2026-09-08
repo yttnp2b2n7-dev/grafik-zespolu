@@ -281,7 +281,7 @@ export default function SchedulePage() {
     startsAt: string;
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
-    eventType: EventType | null;
+    eventTypes: EventType[];
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
@@ -304,7 +304,7 @@ export default function SchedulePage() {
       startsAt: string;
       endsAt: string;
       days?: { startsAt: string; endsAt: string }[];
-      eventType: EventType | null;
+      eventTypes: EventType[];
       loadingEnabled: boolean;
       loadingTime: string | null;
       transportEnabled: boolean;
