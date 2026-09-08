@@ -13,6 +13,7 @@ import {
   EVENT_TYPE_COLORS,
   EVENT_TYPE_LABELS,
   EVENT_TYPE_LETTERS,
+  getEventTypeAccentColor,
 } from "@/lib/eventType";
 
 export function EventCard({
@@ -48,7 +49,10 @@ export function EventCard({
         "d MMM HH:mm",
         { locale: pl }
       )}`;
-  const accentColor = event.color ?? DEFAULT_EVENT_COLOR;
+  const accentColor =
+    getEventTypeAccentColor(event.eventTypes) ??
+    event.color ??
+    DEFAULT_EVENT_COLOR;
 
   return (
     <div

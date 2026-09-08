@@ -31,6 +31,23 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
   ZALADUNEK: "#eab308", // yellow
 };
 
+// When an event carries multiple types, its accent color (card border/
+// background) follows this priority - highest first - rather than
+// whichever type happens to be listed first.
+const EVENT_TYPE_COLOR_PRIORITY: EventType[] = [
+  "ZALADUNEK",
+  "MONTAZ",
+  "OBSLUGA",
+  "DEMONTAZ",
+];
+
+export function getEventTypeAccentColor(types: EventType[]): string | null {
+  for (const type of EVENT_TYPE_COLOR_PRIORITY) {
+    if (types.includes(type)) return EVENT_TYPE_COLORS[type];
+  }
+  return null;
+}
+
 function isEventType(value: unknown): value is EventType {
   return (
     typeof value === "string" && (EVENT_TYPE_OPTIONS as string[]).includes(value)
