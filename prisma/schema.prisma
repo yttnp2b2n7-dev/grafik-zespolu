@@ -37,7 +37,10 @@ model Event {
   startsAt    DateTime
   endsAt      DateTime
   color       String?
+  groupId     String?
   assignments Assignment[]
+
+  @@index([groupId])
 }
 
 model Assignment {

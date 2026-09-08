@@ -45,6 +45,7 @@ export async function PATCH(
     }
     const total = days.length;
     const [first, ...rest] = days;
+    const groupId = crypto.randomUUID();
     const events = await prisma.$transaction([
       prisma.event.update({
         where: { id },
@@ -52,6 +53,7 @@ export async function PATCH(
           title: `${title} 1/${total}`,
           startsAt: first.startsAt,
           endsAt: first.endsAt,
+          groupId,
         },
       }),
       ...rest.map((d, i) =>
@@ -60,6 +62,7 @@ export async function PATCH(
             title: `${title} ${i + 2}/${total}`,
             startsAt: d.startsAt,
             endsAt: d.endsAt,
+            groupId,
           },
         })
       ),

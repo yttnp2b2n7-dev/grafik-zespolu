@@ -37,30 +37,46 @@ const DAY_LABELS = [
   "Niedziela",
 ];
 
-type PackedEvent = { event: Event; startCol: number; endCol: number };
+type GroupItem = { event: Event; col: number };
 
-function packMultiDayEvents(events: Event[], weekStart: Date): PackedEvent[][] {
-  const items: PackedEvent[] = events
-    .filter((ev) => !isSameDay(new Date(ev.startsAt), new Date(ev.endsAt)))
-    .map((ev) => {
-      const start = new Date(ev.startsAt);
-      const end = new Date(ev.endsAt);
-      const startCol = Math.max(0, differenceInCalendarDays(start, weekStart));
-      const endCol = Math.min(6, differenceInCalendarDays(end, weekStart));
-      return { event: ev, startCol, endCol };
-    })
-    .filter((item) => item.startCol <= item.endCol)
-    .sort((a, b) => a.startCol - b.startCol);
+// Events created together as a multi-day series share a groupId (each day is
+// its own independent event so it can have its own assignments), but the
+// whole series should still line up on one shared row across the days it
+// covers, like a single event would.
+function packEventGroups(events: Event[], weekStart: Date): GroupItem[][] {
+  const groupsMap = new Map<string, Event[]>();
+  for (const event of events) {
+    if (!event.groupId) continue;
+    const list = groupsMap.get(event.groupId) ?? [];
+    list.push(event);
+    groupsMap.set(event.groupId, list);
+  }
 
-  const rows: PackedEvent[][] = [];
-  for (const item of items) {
-    const row = rows.find(
-      (r) => r.length === 0 || r[r.length - 1].endCol < item.startCol
-    );
-    if (row) {
-      row.push(item);
+  const groups = [...groupsMap.values()]
+    .map((groupEvents) =>
+      groupEvents
+        .map((event) => ({
+          event,
+          col: differenceInCalendarDays(new Date(event.startsAt), weekStart),
+        }))
+        .filter((item) => item.col >= 0 && item.col <= 6)
+        .sort((a, b) => a.col - b.col)
+    )
+    .filter((items) => items.length > 0)
+    .sort((a, b) => a[0].col - b[0].col);
+
+  const rows: GroupItem[][] = [];
+  const rowRanges: { startCol: number; endCol: number }[] = [];
+  for (const items of groups) {
+    const startCol = items[0].col;
+    const endCol = items[items.length - 1].col;
+    const rowIndex = rowRanges.findIndex((r) => r.endCol < startCol);
+    if (rowIndex !== -1) {
+      rows[rowIndex].push(...items);
+      rowRanges[rowIndex].endCol = Math.max(rowRanges[rowIndex].endCol, endCol);
     } else {
-      rows.push([item]);
+      rows.push([...items]);
+      rowRanges.push({ startCol, endCol });
     }
   }
   return rows;
@@ -224,10 +240,8 @@ export default function SchedulePage() {
   }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const singleDayEvents = events.filter((ev) =>
-    isSameDay(new Date(ev.startsAt), new Date(ev.endsAt))
-  );
-  const multiDayRows = packMultiDayEvents(events, weekStart);
+  const singleDayEvents = events.filter((ev) => !ev.groupId);
+  const groupRows = packEventGroups(events, weekStart);
 
   return (
     <DndContext
@@ -313,14 +327,11 @@ export default function SchedulePage() {
                 </div>
               ))}
 
-              {multiDayRows.map((row, rowIdx) =>
-                row.map(({ event, startCol, endCol }) => (
+              {groupRows.map((row, rowIdx) =>
+                row.map(({ event, col }) => (
                   <div
                     key={event.id}
-                    style={{
-                      gridColumn: `${startCol + 1} / ${endCol + 2}`,
-                      gridRow: rowIdx + 2,
-                    }}
+                    style={{ gridColumn: col + 1, gridRow: rowIdx + 2 }}
                   >
                     <EventCard
                       event={event}
@@ -337,17 +348,13 @@ export default function SchedulePage() {
                 const dayEvents = singleDayEvents.filter((ev) =>
                   isSameDay(new Date(ev.startsAt), day)
                 );
-                let lastMultiRow = -1;
-                multiDayRows.forEach((row, rowIdx) => {
-                  if (
-                    row.some(
-                      (item) => item.startCol <= i && i <= item.endCol
-                    )
-                  ) {
-                    lastMultiRow = rowIdx;
+                let lastGroupRow = -1;
+                groupRows.forEach((row, rowIdx) => {
+                  if (row.some((item) => item.col === i)) {
+                    lastGroupRow = rowIdx;
                   }
                 });
-                const startRow = lastMultiRow + 3;
+                const startRow = lastGroupRow + 3;
 
                 const items = dayEvents.map((ev, evIdx) => (
                   <div

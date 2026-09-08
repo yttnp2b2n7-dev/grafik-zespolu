@@ -30,5 +30,6 @@ export type Event = {
   startsAt: string;
   endsAt: string;
   color: string | null;
+  groupId: string | null;
   assignments: Assignment[];
 };

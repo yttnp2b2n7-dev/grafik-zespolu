@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid days data" }, { status: 400 });
     }
     const total = days.length;
+    const groupId = crypto.randomUUID();
     const events = await prisma.$transaction(
       days.map((d, i) =>
         prisma.event.create({
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
             startsAt: d.startsAt,
             endsAt: d.endsAt,
             color,
+            groupId,
           },
         })
       )
