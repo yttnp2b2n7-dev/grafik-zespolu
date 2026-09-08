@@ -27,8 +27,9 @@ export function NavBar() {
   return (
     <header className="border-b border-border-subtle bg-surface/50 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-8 px-6 py-4">
-        <span className="text-sm font-medium tracking-wide text-foreground">
-          Grafik zespołu
+        <span className="flex items-center gap-2 text-sm font-medium tracking-wide text-foreground">
+          <img src="/logo.png" alt="ImpactVision" className="h-6 w-auto" />
+          Grafik ImpactVision
         </span>
         <nav className="flex flex-1 gap-1">
           {visibleLinks.map((link) => {

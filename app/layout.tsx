@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Grafik zespołu",
+  title: "Grafik ImpactVision",
   description: "Przypisywanie ludzi do wydarzeń w tygodniowym grafiku",
 };
 

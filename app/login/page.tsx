@@ -30,7 +30,10 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-6"
       >
-        <h1 className="text-lg font-semibold text-foreground">Grafik zespołu</h1>
+        <img src="/logo.png" alt="ImpactVision" className="mb-3 h-8 w-auto" />
+        <h1 className="text-lg font-semibold text-foreground">
+          Grafik ImpactVision
+        </h1>
         <p className="mt-1 text-sm text-muted">
           Wpisz hasło, aby przejść do aplikacji.
         </p>
