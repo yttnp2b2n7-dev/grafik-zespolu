@@ -94,6 +94,7 @@ export default function SchedulePage() {
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
+  const [personSearch, setPersonSearch] = useState("");
   const isDraggingRef = useRef(false);
 
   const sensors = useSensors(
@@ -239,6 +240,10 @@ export default function SchedulePage() {
     }
   }
 
+  const filteredPeople = people.filter((person) =>
+    person.name.toLowerCase().includes(personSearch.trim().toLowerCase())
+  );
+
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const singleDayEvents = events.filter((ev) => !ev.groupId);
   const groupRows = packEventGroups(events, weekStart);
@@ -297,13 +302,24 @@ export default function SchedulePage() {
               <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
                 Ludzie
               </p>
+              <input
+                value={personSearch}
+                onChange={(e) => setPersonSearch(e.target.value)}
+                placeholder="Szukaj…"
+                className="mb-2 w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+              />
               <div className="flex flex-col gap-1.5">
-                {people.map((person) => (
+                {filteredPeople.map((person) => (
                   <PersonTile key={person.id} person={person} />
                 ))}
                 {people.length === 0 && (
                   <p className="px-1 text-xs text-muted">
                     Dodaj osoby w zakładce „Ludzie”.
+                  </p>
+                )}
+                {people.length > 0 && filteredPeople.length === 0 && (
+                  <p className="px-1 text-xs text-muted">
+                    Brak osób pasujących do wyszukiwania.
                   </p>
                 )}
               </div>
