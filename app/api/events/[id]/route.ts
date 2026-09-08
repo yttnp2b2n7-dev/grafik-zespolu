@@ -40,6 +40,7 @@ export async function PATCH(
 
   const loadingTransport = parseLoadingTransportInput(body);
   const eventTypes = parseEventTypesInput(body.eventTypes);
+  const notes = typeof body.notes === "string" ? body.notes.trim() || null : null;
 
   // Turning a single event into a multi-day range on edit: keep this
   // event as one day of the series and create independent events for the
@@ -95,6 +96,7 @@ export async function PATCH(
               endsAt: entry.endsAt,
               groupId,
               eventTypes,
+              notes,
               ...loadingTransport,
             },
           });
@@ -115,6 +117,7 @@ export async function PATCH(
             groupId,
             color,
             eventTypes,
+            notes,
             ...loadingTransport,
           },
         });
@@ -143,7 +146,7 @@ export async function PATCH(
 
   const event = await prisma.event.update({
     where: { id },
-    data: { title, startsAt, endsAt, eventTypes, ...loadingTransport },
+    data: { title, startsAt, endsAt, eventTypes, notes, ...loadingTransport },
   });
   return NextResponse.json(event);
 }

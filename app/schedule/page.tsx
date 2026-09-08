@@ -282,6 +282,7 @@ export default function SchedulePage() {
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
     eventTypes: EventType[];
+    notes: string | null;
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;

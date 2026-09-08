@@ -29,6 +29,7 @@ export function EventModal({
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
     eventTypes: EventType[];
+    notes: string | null;
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
@@ -39,6 +40,7 @@ export function EventModal({
   const initialEnd = event ? new Date(event.endsAt) : null;
 
   const [title, setTitle] = useState(event?.title ?? "");
+  const [notes, setNotes] = useState(event?.notes ?? "");
   const [eventTypes, setEventTypes] = useState<EventType[]>(
     event?.eventTypes ?? []
   );
@@ -144,6 +146,7 @@ export function EventModal({
           endsAt: days[days.length - 1].endsAt,
           days,
           eventTypes,
+          notes: notes.trim() || null,
           loadingEnabled,
           loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
           transportEnabled,
@@ -172,6 +175,7 @@ export function EventModal({
         endsAt: endsAt.toISOString(),
         days: [],
         eventTypes,
+        notes: notes.trim() || null,
         loadingEnabled,
         loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
         transportEnabled,
@@ -199,6 +203,17 @@ export function EventModal({
               onChange={(e) => setTitle(e.target.value)}
               autoFocus
               className="mt-1 w-full rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-muted">Uwagi</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={5}
+              placeholder="Dokładne godziny pracy, wytyczne dla ekipy…"
+              className="mt-1 w-full resize-y rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
             />
           </div>
 

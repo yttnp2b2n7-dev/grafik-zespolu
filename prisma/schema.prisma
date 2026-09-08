@@ -50,6 +50,7 @@ model Event {
   loadingTime       String?
   transportEnabled  Boolean      @default(false)
   transportVehicle  String?
+  notes             String?
   assignments       Assignment[]
 
   @@index([groupId])

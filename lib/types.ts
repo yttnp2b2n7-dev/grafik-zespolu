@@ -39,5 +39,6 @@ export type Event = {
   loadingTime: string | null;
   transportEnabled: boolean;
   transportVehicle: string | null;
+  notes: string | null;
   assignments: Assignment[];
 };

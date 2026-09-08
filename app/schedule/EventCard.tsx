@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { format, isSameDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import Link from "next/link";
 import type { Event } from "@/lib/types";
 import { AssignmentChip } from "./AssignmentChip";
+import { EventDetailsModal } from "./EventDetailsModal";
 import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
 import {
   EVENT_TYPE_COLORS,
@@ -30,6 +32,7 @@ export function EventCard({
   onCopyFromPreviousDay?: () => void;
   readOnly?: boolean;
 }) {
+  const [showDetails, setShowDetails] = useState(false);
   const { setNodeRef, isOver } = useDroppable({
     id: `event-${event.id}`,
     data: { type: "event", eventId: event.id },
@@ -137,33 +140,46 @@ export function EventCard({
         )}
       </div>
 
-      {!readOnly && (
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted/70">
-          <button
-            onClick={onEdit}
-            className="underline-offset-2 transition hover:text-accent-hover hover:underline"
-          >
-            Edytuj
-          </button>
-          <span>·</span>
-          <Link
-            href={`/reports?event=${event.id}`}
-            className="underline-offset-2 transition hover:text-accent-hover hover:underline"
-          >
-            Raport
-          </Link>
-          {onCopyFromPreviousDay && (
-            <>
-              <span>·</span>
-              <button
-                onClick={onCopyFromPreviousDay}
-                className="underline-offset-2 transition hover:text-accent-hover hover:underline"
-              >
-                Kopiuj ekipę z poprzedniego dnia
-              </button>
-            </>
-          )}
-        </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted/70">
+        <button
+          onClick={() => setShowDetails(true)}
+          className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+        >
+          Szczegóły
+        </button>
+        {!readOnly && (
+          <>
+            <span>·</span>
+            <button
+              onClick={onEdit}
+              className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+            >
+              Edytuj
+            </button>
+            <span>·</span>
+            <Link
+              href={`/reports?event=${event.id}`}
+              className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+            >
+              Raport
+            </Link>
+            {onCopyFromPreviousDay && (
+              <>
+                <span>·</span>
+                <button
+                  onClick={onCopyFromPreviousDay}
+                  className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+                >
+                  Kopiuj ekipę z poprzedniego dnia
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+
+      {showDetails && (
+        <EventDetailsModal event={event} onClose={() => setShowDetails(false)} />
       )}
     </div>
   );

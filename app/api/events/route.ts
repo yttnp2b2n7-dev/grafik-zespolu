@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
 
   const loadingTransport = parseLoadingTransportInput(body);
   const eventTypes = parseEventTypesInput(body.eventTypes);
+  const notes = typeof body.notes === "string" ? body.notes.trim() || null : null;
 
   // Multi-day creation: one independent event per day, numbered "Title i/N",
   // so each day can be assigned different people.
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
             color,
             groupId,
             eventTypes,
+            notes,
             ...loadingTransport,
           },
         })
@@ -89,7 +91,15 @@ export async function POST(req: NextRequest) {
   }
 
   const event = await prisma.event.create({
-    data: { title, startsAt, endsAt, color, eventTypes, ...loadingTransport },
+    data: {
+      title,
+      startsAt,
+      endsAt,
+      color,
+      eventTypes,
+      notes,
+      ...loadingTransport,
+    },
   });
   return NextResponse.json(event, { status: 201 });
 }
