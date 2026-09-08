@@ -65,6 +65,17 @@ export default function PeoplePage() {
     setPeople((prev) => prev.filter((p) => p.id !== id));
   }
 
+  async function renamePerson(id: string, name: string) {
+    const res = await fetch(`/api/people/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) return false;
+    setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
+    return true;
+  }
+
   async function addSkill(personId: string, name: string) {
     const trimmed = name.trim();
     if (!trimmed) return;
@@ -141,6 +152,7 @@ export default function PeoplePage() {
             key={person.id}
             person={person}
             onRemove={() => removePerson(person.id)}
+            onRename={(name) => renamePerson(person.id, name)}
             onAddSkill={(name) => addSkill(person.id, name)}
             onRemoveSkill={(skillId) => removeSkill(person.id, skillId)}
           />
@@ -153,15 +165,20 @@ export default function PeoplePage() {
 function PersonCard({
   person,
   onRemove,
+  onRename,
   onAddSkill,
   onRemoveSkill,
 }: {
   person: Person;
   onRemove: () => void;
+  onRename: (name: string) => Promise<boolean>;
   onAddSkill: (name: string) => void;
   onRemoveSkill: (skillId: string) => void;
 }) {
   const [skillInput, setSkillInput] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [nameInput, setNameInput] = useState(person.name);
+  const [renameError, setRenameError] = useState(false);
 
   function submitSkill(e: React.FormEvent) {
     e.preventDefault();
@@ -170,25 +187,84 @@ function PersonCard({
     setSkillInput("");
   }
 
+  function startEditing() {
+    setNameInput(person.name);
+    setRenameError(false);
+    setIsEditing(true);
+  }
+
+  async function submitRename(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    const ok = await onRename(trimmed);
+    if (ok) {
+      setIsEditing(false);
+    } else {
+      setRenameError(true);
+    }
+  }
+
   return (
     <div className="rounded-lg border border-border-subtle bg-surface p-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: person.color }}
-          />
-          <span className="text-sm font-medium text-foreground">
-            {person.name}
-          </span>
-        </div>
-        <button
-          onClick={onRemove}
-          className="text-xs text-muted transition hover:text-danger"
-        >
-          Usuń
-        </button>
+        {isEditing ? (
+          <form onSubmit={submitRename} className="flex flex-1 items-center gap-2">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: person.color }}
+            />
+            <input
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              autoFocus
+              className="min-w-0 flex-1 rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="text-xs text-accent-hover transition hover:underline"
+            >
+              Zapisz
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="text-xs text-muted transition hover:text-foreground"
+            >
+              Anuluj
+            </button>
+          </form>
+        ) : (
+          <>
+            <div className="flex items-center gap-2.5">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: person.color }}
+              />
+              <span className="text-sm font-medium text-foreground">
+                {person.name}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={startEditing}
+                className="text-xs text-muted transition hover:text-accent-hover"
+              >
+                Edytuj
+              </button>
+              <button
+                onClick={onRemove}
+                className="text-xs text-muted transition hover:text-danger"
+              >
+                Usuń
+              </button>
+            </div>
+          </>
+        )}
       </div>
+      {renameError && (
+        <p className="mt-1 text-xs text-danger">Nie udało się zapisać zmiany.</p>
+      )}
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {person.skills.map(({ skill }) => (
