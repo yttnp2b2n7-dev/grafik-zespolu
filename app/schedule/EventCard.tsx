@@ -66,9 +66,9 @@ export function EventCard({
       }
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-start gap-2">
+        <div className="min-w-0 flex-1">
           {event.eventTypes.length > 0 && (
-            <span className="flex shrink-0 gap-1">
+            <div className="mb-1 flex flex-wrap gap-1">
               {event.eventTypes.map((type) => (
                 <span
                   key={type}
@@ -80,30 +80,31 @@ export function EventCard({
                   {EVENT_TYPE_LETTERS[type]}
                 </span>
               ))}
-            </span>
+            </div>
           )}
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-foreground">
-              {event.title}
+          <p
+            className="truncate text-sm font-medium text-foreground"
+            title={event.title}
+          >
+            {event.title}
+          </p>
+          <p className="text-xs text-muted">{timeLabel}</p>
+          {(event.loadingEnabled || event.transportEnabled) && (
+            <p className="mt-0.5 text-xs text-muted/80">
+              {event.loadingEnabled && (
+                <span>
+                  Załadunek{event.loadingTime ? `: ${event.loadingTime}` : ""}
+                </span>
+              )}
+              {event.loadingEnabled && event.transportEnabled && " · "}
+              {event.transportEnabled && (
+                <span>
+                  Transport
+                  {event.transportVehicle ? `: ${event.transportVehicle}` : ""}
+                </span>
+              )}
             </p>
-            <p className="text-xs text-muted">{timeLabel}</p>
-            {(event.loadingEnabled || event.transportEnabled) && (
-              <p className="mt-0.5 text-xs text-muted/80">
-                {event.loadingEnabled && (
-                  <span>
-                    Załadunek{event.loadingTime ? `: ${event.loadingTime}` : ""}
-                  </span>
-                )}
-                {event.loadingEnabled && event.transportEnabled && " · "}
-                {event.transportEnabled && (
-                  <span>
-                    Transport
-                    {event.transportVehicle ? `: ${event.transportVehicle}` : ""}
-                  </span>
-                )}
-              </p>
-            )}
-          </div>
+          )}
         </div>
         {!readOnly && (
           <button
