@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseDaysInput } from "@/lib/eventDaysValidation";
+import { randomEventColor } from "@/lib/eventColors";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -30,7 +31,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const title = typeof body.title === "string" ? body.title.trim() : "";
-  const color = typeof body.color === "string" ? body.color : null;
+  const color =
+    typeof body.color === "string" ? body.color : randomEventColor();
 
   if (!title) {
     return NextResponse.json({ error: "Invalid event data" }, { status: 400 });

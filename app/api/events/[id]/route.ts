@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseDaysInput } from "@/lib/eventDaysValidation";
+import { randomEventColor } from "@/lib/eventColors";
 
 export async function GET(
   _req: NextRequest,
@@ -46,6 +47,8 @@ export async function PATCH(
     const total = days.length;
     const [first, ...rest] = days;
     const groupId = crypto.randomUUID();
+    const existing = await prisma.event.findUnique({ where: { id } });
+    const color = existing?.color ?? randomEventColor();
     const events = await prisma.$transaction([
       prisma.event.update({
         where: { id },
@@ -63,6 +66,7 @@ export async function PATCH(
             startsAt: d.startsAt,
             endsAt: d.endsAt,
             groupId,
+            color,
           },
         })
       ),

@@ -6,6 +6,7 @@ import { pl } from "date-fns/locale";
 import Link from "next/link";
 import type { Event } from "@/lib/types";
 import { AssignmentChip } from "./AssignmentChip";
+import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
 
 export function EventCard({
   event,
@@ -35,6 +36,8 @@ export function EventCard({
         "d MMM HH:mm",
         { locale: pl }
       )}`;
+  const accentColor = event.color ?? DEFAULT_EVENT_COLOR;
+
   return (
     <div
       ref={setNodeRef}
@@ -43,6 +46,15 @@ export function EventCard({
           ? "border-accent bg-accent/10"
           : "border-border-subtle bg-surface"
       }`}
+      style={
+        isOver
+          ? undefined
+          : {
+              borderLeftColor: accentColor,
+              borderLeftWidth: 3,
+              backgroundColor: `${accentColor}14`,
+            }
+      }
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
