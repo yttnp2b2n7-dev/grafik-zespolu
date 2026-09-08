@@ -14,7 +14,7 @@ export function Footer() {
         <img
           src="/focuscraft-logo.svg"
           alt="FocusCraft — Event & Concert Technical Support"
-          className="h-12 w-auto"
+          className="h-24 w-auto"
         />
       </div>
     </footer>
