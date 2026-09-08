@@ -54,8 +54,11 @@ export function TeamPeriodPdf({
             <Text style={styles.eventMeta}>{eventTimeLabel(event)}</Text>
             <Text style={styles.person}>
               Przypisani:{" "}
-              {event.assignments.map((a) => a.person.name).join(", ") ||
-                "brak"}
+              {event.assignments
+                .map((a) =>
+                  a.isLead ? `${a.person.name} (dowódca)` : a.person.name
+                )
+                .join(", ") || "brak"}
             </Text>
             {(event.loadingEnabled || event.transportEnabled) && (
               <Text style={styles.eventMeta}>

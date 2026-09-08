@@ -14,7 +14,9 @@ export function getEventDateTimeLabel(event: Event) {
 
 export function formatEventReportText(event: Event): string {
   const { dateLabel, timeLabel } = getEventDateTimeLabel(event);
-  const people = event.assignments.map((a) => a.person.name).join(", ");
+  const people = event.assignments
+    .map((a) => (a.isLead ? `${a.person.name} (dowódca)` : a.person.name))
+    .join(", ");
 
   const lines = [
     event.title,

@@ -21,6 +21,7 @@ export type Assignment = {
   id: string;
   eventId: string;
   personId: string;
+  isLead: boolean;
   person: Person;
 };
 

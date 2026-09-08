@@ -48,11 +48,12 @@ model Event {
 }
 
 model Assignment {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   eventId  String
   personId String
-  event    Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  person   Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  isLead   Boolean @default(false)
+  event    Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person   Person  @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, personId])
 }

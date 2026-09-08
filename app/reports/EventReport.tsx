@@ -59,6 +59,11 @@ export function EventReport({ event }: { event: Event }) {
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: a.person.color }}
                 />
+                {a.isLead && (
+                  <span className="text-yellow-400" title="Dowódca wydarzenia">
+                    ★
+                  </span>
+                )}
                 <span className="text-foreground">{a.person.name}</span>
                 {a.person.skills.length > 0 && (
                   <span className="text-xs text-muted">

@@ -11,6 +11,7 @@ import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
 export function EventCard({
   event,
   onRemoveAssignment,
+  onToggleLead,
   onDelete,
   onEdit,
   onCopyFromPreviousDay,
@@ -18,6 +19,7 @@ export function EventCard({
 }: {
   event: Event;
   onRemoveAssignment: (assignmentId: string) => void;
+  onToggleLead?: (assignmentId: string, isLead: boolean) => void;
   onDelete: () => void;
   onEdit: () => void;
   onCopyFromPreviousDay?: () => void;
@@ -99,6 +101,9 @@ export function EventCard({
             assignment={a}
             eventId={event.id}
             onRemove={() => onRemoveAssignment(a.id)}
+            onToggleLead={
+              onToggleLead ? () => onToggleLead(a.id, !a.isLead) : undefined
+            }
             readOnly={readOnly}
           />
         ))}

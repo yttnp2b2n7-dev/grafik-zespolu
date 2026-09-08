@@ -228,6 +228,32 @@ export default function SchedulePage() {
     );
   }
 
+  async function toggleLead(assignmentId: string, isLead: boolean) {
+    const eventId = events.find((ev) =>
+      ev.assignments.some((a) => a.id === assignmentId)
+    )?.id;
+
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.id !== eventId
+          ? ev
+          : {
+              ...ev,
+              assignments: ev.assignments.map((a) => ({
+                ...a,
+                isLead: a.id === assignmentId ? isLead : isLead ? false : a.isLead,
+              })),
+            }
+      )
+    );
+
+    await fetch(`/api/assignments/${assignmentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isLead }),
+    });
+  }
+
   async function removeAssignment(assignmentId: string) {
     setEvents((prev) =>
       prev.map((ev) => ({
@@ -400,6 +426,7 @@ export default function SchedulePage() {
                       <EventCard
                         event={event}
                         onRemoveAssignment={removeAssignment}
+                        onToggleLead={toggleLead}
                         onDelete={() => deleteEvent(event.id)}
                         onEdit={() => setEditingEvent(event)}
                         onCopyFromPreviousDay={
@@ -434,6 +461,7 @@ export default function SchedulePage() {
                     <EventCard
                       event={ev}
                       onRemoveAssignment={removeAssignment}
+                      onToggleLead={toggleLead}
                       onDelete={() => deleteEvent(ev.id)}
                       onEdit={() => setEditingEvent(ev)}
                       readOnly={!isAdmin}
