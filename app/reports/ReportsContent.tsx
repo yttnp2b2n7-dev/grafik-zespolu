@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,6 +24,7 @@ import { fetchJsonOrNull } from "@/lib/clientFetch";
 import {
   computePersonShifts,
   formatMinutesAsHours,
+  groupShiftsByMonth,
   totalMinutes,
   type PersonShift,
 } from "@/lib/personShifts";
@@ -179,6 +180,7 @@ function PeriodReport() {
   const shifts: PersonShift[] = selectedPerson
     ? computePersonShifts(events, selectedPerson.id)
     : [];
+  const months = groupShiftsByMonth(shifts);
 
   async function handleCopy() {
     const text = selectedPerson
@@ -331,20 +333,52 @@ function PeriodReport() {
             {shifts.length === 0 ? (
               <p className="mt-3 text-sm text-muted/60">Brak zmian w tym okresie.</p>
             ) : (
-              <ul className="mt-3 flex flex-col gap-1.5">
-                {shifts.map((s) => (
-                  <li
-                    key={s.key}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm"
-                  >
-                    <span className="text-foreground">{s.title}</span>
-                    <span className="text-xs text-muted">
-                      {format(s.start, "d MMM yyyy", { locale: pl })} ·{" "}
-                      {format(s.start, "HH:mm")}–{format(s.end, "HH:mm")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-3 overflow-x-auto rounded-md border border-border-subtle">
+                <table className="w-full min-w-[560px] border-collapse text-sm">
+                  <tbody>
+                    {months.map((month) => (
+                      <Fragment key={month.key}>
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="bg-surface-hover px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground"
+                          >
+                            {month.label}
+                          </td>
+                        </tr>
+                        <tr className="text-left text-[11px] uppercase tracking-wide text-muted">
+                          <th className="px-3 py-1 font-medium">Data</th>
+                          <th className="px-3 py-1 font-medium">Godziny</th>
+                          <th className="px-3 py-1 font-medium">Wydarzenie</th>
+                          <th className="px-3 py-1 font-medium">Uwagi</th>
+                        </tr>
+                        {month.shifts.map((s) => (
+                          <tr key={s.key} className="border-t border-border-subtle">
+                            <td className="px-3 py-1.5 text-foreground">
+                              {format(s.start, "d MMM yyyy", { locale: pl })}
+                            </td>
+                            <td className="px-3 py-1.5 text-muted">
+                              {format(s.start, "HH:mm")}–{format(s.end, "HH:mm")}
+                            </td>
+                            <td className="px-3 py-1.5 text-foreground">
+                              {s.title}
+                            </td>
+                            <td className="px-3 py-1.5 text-muted/30">—</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-border-subtle bg-background/40">
+                          <td colSpan={4} className="px-3 py-1.5 text-xs text-muted">
+                            Podsumowanie {month.label}: {month.shifts.length}{" "}
+                            {month.shifts.length === 1 ? "dzień" : "dni"}{" "}
+                            przepracowanych,{" "}
+                            {formatMinutesAsHours(totalMinutes(month.shifts))}
+                          </td>
+                        </tr>
+                      </Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
@@ -374,9 +408,16 @@ function formatPersonReportText(
   if (shifts.length === 0) {
     return `${header}\n${total}\n\nBrak zmian w tym okresie.`;
   }
-  const lines = shifts.map(
-    (s) =>
-      `${format(s.start, "d MMMM yyyy", { locale: pl })}, ${format(s.start, "HH:mm")}–${format(s.end, "HH:mm")} — ${s.title}`
-  );
-  return `${header}\n${total}\n\n${lines.join("\n")}`;
+  const months = groupShiftsByMonth(shifts);
+  const sections = months.map((month) => {
+    const lines = month.shifts.map(
+      (s) =>
+        `${format(s.start, "d MMMM yyyy", { locale: pl })}, ${format(s.start, "HH:mm")}–${format(s.end, "HH:mm")} — ${s.title}`
+    );
+    const summary = `Podsumowanie ${month.label}: ${month.shifts.length} ${
+      month.shifts.length === 1 ? "dzień" : "dni"
+    } przepracowanych, ${formatMinutesAsHours(totalMinutes(month.shifts))}`;
+    return `${month.label}\n${lines.join("\n")}\n${summary}`;
+  });
+  return `${header}\n${total}\n\n${sections.join("\n\n")}`;
 }

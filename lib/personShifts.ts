@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
 
 export type PersonShift = {
@@ -28,6 +30,33 @@ export function computePersonShifts(
       };
     })
     .sort((a, b) => a.start.getTime() - b.start.getTime());
+}
+
+export type MonthGroup = {
+  key: string;
+  label: string;
+  shifts: PersonShift[];
+};
+
+// Splits a person's shifts into one group per calendar month, so a yearly
+// report can show a subtotal after each month (12 of them for a full year).
+export function groupShiftsByMonth(shifts: PersonShift[]): MonthGroup[] {
+  const map = new Map<string, MonthGroup>();
+  for (const shift of shifts) {
+    const key = format(shift.start, "yyyy-MM");
+    let group = map.get(key);
+    if (!group) {
+      const rawLabel = format(shift.start, "LLLL yyyy", { locale: pl });
+      group = {
+        key,
+        label: rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1),
+        shifts: [],
+      };
+      map.set(key, group);
+    }
+    group.shifts.push(shift);
+  }
+  return [...map.values()].sort((a, b) => a.key.localeCompare(b.key));
 }
 
 export function totalMinutes(shifts: PersonShift[]): number {

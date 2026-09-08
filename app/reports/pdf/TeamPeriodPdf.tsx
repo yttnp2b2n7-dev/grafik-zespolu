@@ -2,9 +2,12 @@ import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import { format, isSameDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
+import { registerPdfFonts } from "./registerFonts";
+
+registerPdfFonts();
 
 const styles = StyleSheet.create({
-  page: { padding: 32, fontSize: 10, fontFamily: "Helvetica" },
+  page: { padding: 32, fontSize: 10, fontFamily: "Lato" },
   title: { fontSize: 16, marginBottom: 2 },
   subtitle: { fontSize: 9, color: "#666", marginBottom: 18 },
   eventBlock: {
