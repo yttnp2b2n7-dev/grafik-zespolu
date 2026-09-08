@@ -8,6 +8,7 @@ import {
   TableRow,
   TableCell,
   WidthType,
+  BorderStyle,
 } from "docx";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
@@ -18,11 +19,17 @@ import {
   totalMinutes,
 } from "@/lib/personShifts";
 
-const COL = { date: 22, time: 16, title: 30, notes: 32 };
+const COL = { date: 18, time: 14, title: 24, rate: 14, notes: 30 };
+const COLUMN_COUNT = 5;
+
+const rowBorder = {
+  bottom: { style: BorderStyle.SINGLE, size: 4, color: "DDDDDD" },
+};
 
 function headerCell(text: string, size: number) {
   return new TableCell({
     width: { size, type: WidthType.PERCENTAGE },
+    borders: rowBorder,
     children: [
       new Paragraph({ children: [new TextRun({ text, bold: true })] }),
     ],
@@ -32,15 +39,17 @@ function headerCell(text: string, size: number) {
 function cell(text: string, size: number) {
   return new TableCell({
     width: { size, type: WidthType.PERCENTAGE },
+    borders: rowBorder,
     children: [new Paragraph(text)],
   });
 }
 
 function spanningCell(text: string, bold: boolean, shading?: string) {
   return new TableCell({
-    columnSpan: 4,
+    columnSpan: COLUMN_COUNT,
     width: { size: 100, type: WidthType.PERCENTAGE },
     shading: shading ? { fill: shading } : undefined,
+    borders: rowBorder,
     children: [new Paragraph({ children: [new TextRun({ text, bold })] })],
   });
 }
@@ -59,6 +68,7 @@ export async function buildPersonReportDocx(
         headerCell("Data", COL.date),
         headerCell("Godziny", COL.time),
         headerCell("Wydarzenie", COL.title),
+        headerCell("Stawka", COL.rate),
         headerCell("Uwagi", COL.notes),
       ],
     }),
@@ -75,6 +85,7 @@ export async function buildPersonReportDocx(
             cell(format(s.start, "d MMM yyyy", { locale: pl }), COL.date),
             cell(`${format(s.start, "HH:mm")}–${format(s.end, "HH:mm")}`, COL.time),
             cell(s.title, COL.title),
+            cell("", COL.rate),
             cell("", COL.notes),
           ],
         })
@@ -86,7 +97,7 @@ export async function buildPersonReportDocx(
           spanningCell(
             `Podsumowanie ${month.label}: ${month.shifts.length} ${
               month.shifts.length === 1 ? "dzień" : "dni"
-            } przepracowanych, ${formatMinutesAsHours(totalMinutes(month.shifts))}`,
+            } przepracowanych`,
             false
           ),
         ],

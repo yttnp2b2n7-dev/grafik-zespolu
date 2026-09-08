@@ -340,7 +340,7 @@ function PeriodReport() {
                       <Fragment key={month.key}>
                         <tr>
                           <td
-                            colSpan={4}
+                            colSpan={5}
                             className="bg-surface-hover px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground"
                           >
                             {month.label}
@@ -350,10 +350,11 @@ function PeriodReport() {
                           <th className="px-3 py-1 font-medium">Data</th>
                           <th className="px-3 py-1 font-medium">Godziny</th>
                           <th className="px-3 py-1 font-medium">Wydarzenie</th>
+                          <th className="px-3 py-1 font-medium">Stawka</th>
                           <th className="px-3 py-1 font-medium">Uwagi</th>
                         </tr>
                         {month.shifts.map((s) => (
-                          <tr key={s.key} className="border-t border-border-subtle">
+                          <tr key={s.key} className="border-t border-border-subtle/60">
                             <td className="px-3 py-1.5 text-foreground">
                               {format(s.start, "d MMM yyyy", { locale: pl })}
                             </td>
@@ -364,14 +365,14 @@ function PeriodReport() {
                               {s.title}
                             </td>
                             <td className="px-3 py-1.5 text-muted/30">—</td>
+                            <td className="px-3 py-1.5 text-muted/30">—</td>
                           </tr>
                         ))}
                         <tr className="border-t border-border-subtle bg-background/40">
-                          <td colSpan={4} className="px-3 py-1.5 text-xs text-muted">
+                          <td colSpan={5} className="px-3 py-1.5 text-xs text-muted">
                             Podsumowanie {month.label}: {month.shifts.length}{" "}
                             {month.shifts.length === 1 ? "dzień" : "dni"}{" "}
-                            przepracowanych,{" "}
-                            {formatMinutesAsHours(totalMinutes(month.shifts))}
+                            przepracowanych
                           </td>
                         </tr>
                       </Fragment>
@@ -416,7 +417,7 @@ function formatPersonReportText(
     );
     const summary = `Podsumowanie ${month.label}: ${month.shifts.length} ${
       month.shifts.length === 1 ? "dzień" : "dni"
-    } przepracowanych, ${formatMinutesAsHours(totalMinutes(month.shifts))}`;
+    } przepracowanych`;
     return `${month.label}\n${lines.join("\n")}\n${summary}`;
   });
   return `${header}\n${total}\n\n${sections.join("\n\n")}`;

@@ -35,10 +35,11 @@ const styles = StyleSheet.create({
     borderBottom: "1 solid #eeeeee",
     paddingVertical: 4,
   },
-  colDate: { width: "22%" },
-  colTime: { width: "16%" },
-  colTitle: { width: "30%" },
-  colNotes: { width: "32%" },
+  colDate: { width: "18%" },
+  colTime: { width: "14%" },
+  colTitle: { width: "24%" },
+  colRate: { width: "14%" },
+  colNotes: { width: "30%" },
   headerText: { fontSize: 9, color: "#333333" },
   cellText: { fontSize: 9 },
   monthSummary: {
@@ -90,6 +91,9 @@ export function PersonPeriodPdf({
                 <Text style={[styles.headerText, styles.colTitle]}>
                   Wydarzenie
                 </Text>
+                <Text style={[styles.headerText, styles.colRate]}>
+                  Stawka
+                </Text>
                 <Text style={[styles.headerText, styles.colNotes]}>
                   Uwagi
                 </Text>
@@ -105,13 +109,13 @@ export function PersonPeriodPdf({
                   <Text style={[styles.cellText, styles.colTitle]}>
                     {s.title}
                   </Text>
+                  <Text style={[styles.cellText, styles.colRate]}> </Text>
                   <Text style={[styles.cellText, styles.colNotes]}> </Text>
                 </View>
               ))}
               <Text style={styles.monthSummary}>
                 Podsumowanie {month.label}: {month.shifts.length}{" "}
-                {month.shifts.length === 1 ? "dzień" : "dni"} przepracowanych,{" "}
-                {formatMinutesAsHours(totalMinutes(month.shifts))}
+                {month.shifts.length === 1 ? "dzień" : "dni"} przepracowanych
               </Text>
             </View>
           ))
