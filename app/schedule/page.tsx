@@ -114,7 +114,11 @@ export default function SchedulePage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
   const [personSearch, setPersonSearch] = useState("");
+  const [eventSearch, setEventSearch] = useState("");
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
+  const [upcomingLoading, setUpcomingLoading] = useState(false);
   const isDraggingRef = useRef(false);
+  const isSearching = eventSearch.trim().length > 0;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -133,6 +137,13 @@ export default function SchedulePage() {
     if (data) setEvents(data);
   }, [weekStart]);
 
+  const loadUpcomingEvents = useCallback(async () => {
+    const data = await fetchJsonOrNull<Event[]>(
+      `/api/events?from=${new Date().toISOString()}`
+    );
+    if (data) setUpcomingEvents(data);
+  }, []);
+
   useEffect(() => {
     if (isAdmin) loadPeople();
   }, [isAdmin, loadPeople]);
@@ -150,6 +161,14 @@ export default function SchedulePage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [isAdmin, loadPeople, loadEvents]);
+
+  useEffect(() => {
+    if (!isSearching) return;
+    setUpcomingLoading(true);
+    loadUpcomingEvents().finally(() => setUpcomingLoading(false));
+    const interval = setInterval(loadUpcomingEvents, 5000);
+    return () => clearInterval(interval);
+  }, [isSearching, loadUpcomingEvents]);
 
   function handleDragStart(e: DragStartEvent) {
     isDraggingRef.current = true;
@@ -326,6 +345,17 @@ export default function SchedulePage() {
     person.name.toLowerCase().includes(personSearch.trim().toLowerCase())
   );
 
+  const eventSearchQuery = eventSearch.trim().toLowerCase();
+  const searchResults = isSearching
+    ? upcomingEvents.filter(
+        (ev) =>
+          ev.title.toLowerCase().includes(eventSearchQuery) ||
+          ev.assignments.some((a) =>
+            a.person.name.toLowerCase().includes(eventSearchQuery)
+          )
+      )
+    : [];
+
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const singleDayEvents = events.filter((ev) => !ev.groupId);
   const groupRows = packEventGroups(events, weekStart);
@@ -337,7 +367,55 @@ export default function SchedulePage() {
       onDragEnd={handleDragEnd}
     >
       <div className="mx-auto max-w-[1400px] px-6 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="relative">
+          <input
+            value={eventSearch}
+            onChange={(e) => setEventSearch(e.target.value)}
+            placeholder="Szukaj wydarzenia po nazwie lub osobie…"
+            className="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          {isSearching && (
+            <button
+              onClick={() => setEventSearch("")}
+              aria-label="Wyczyść wyszukiwanie"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted transition hover:text-foreground"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {isSearching ? (
+          <div className="mt-6 flex flex-col gap-3">
+            {upcomingLoading && upcomingEvents.length === 0 && (
+              <p className="text-sm text-muted">Ładowanie…</p>
+            )}
+            {!upcomingLoading && searchResults.length === 0 && (
+              <p className="text-sm text-muted">
+                Brak nadchodzących wydarzeń pasujących do wyszukiwania.
+              </p>
+            )}
+            {searchResults.map((event) => (
+              <div key={event.id} className="max-w-sm">
+                <p className="mb-1 text-xs text-muted">
+                  {format(new Date(event.startsAt), "EEEE, d MMMM yyyy", {
+                    locale: pl,
+                  })}
+                </p>
+                <EventCard
+                  event={event}
+                  onRemoveAssignment={removeAssignment}
+                  onToggleLead={toggleLead}
+                  onDelete={() => deleteEvent(event.id)}
+                  onEdit={() => setEditingEvent(event)}
+                  readOnly={!isAdmin}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setWeekStart((d) => subWeeks(d, 1))}
@@ -521,6 +599,8 @@ export default function SchedulePage() {
           </div>
         </div>
         {loading && <p className="mt-4 text-xs text-muted">Ładowanie…</p>}
+          </>
+        )}
       </div>
 
       <DragOverlay>

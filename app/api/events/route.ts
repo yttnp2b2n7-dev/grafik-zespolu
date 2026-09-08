@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const weekStart = searchParams.get("weekStart");
   const weekEnd = searchParams.get("weekEnd");
+  const from = searchParams.get("from");
 
   const where =
     weekStart && weekEnd
@@ -16,7 +17,9 @@ export async function GET(req: NextRequest) {
           startsAt: { lt: new Date(weekEnd) },
           endsAt: { gt: new Date(weekStart) },
         }
-      : {};
+      : from
+        ? { endsAt: { gte: new Date(from) } }
+        : {};
 
   const events = await prisma.event.findMany({
     where,
