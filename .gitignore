@@ -42,3 +42,6 @@ next-env.d.ts
 
 # claude code runtime files
 .claude/*.lock
+
+# local database backups (contain real people's data - never commit)
+/backups/
