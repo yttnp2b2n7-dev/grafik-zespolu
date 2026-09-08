@@ -21,12 +21,26 @@ export function EventModal({
     startsAt: string;
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
+    loadingEnabled: boolean;
+    loadingTime: string | null;
+    transportEnabled: boolean;
+    transportVehicle: string | null;
   }) => Promise<void>;
 }) {
   const initialStart = event ? new Date(event.startsAt) : null;
   const initialEnd = event ? new Date(event.endsAt) : null;
 
   const [title, setTitle] = useState(event?.title ?? "");
+  const [loadingEnabled, setLoadingEnabled] = useState(
+    event?.loadingEnabled ?? false
+  );
+  const [loadingTime, setLoadingTime] = useState(event?.loadingTime ?? "");
+  const [transportEnabled, setTransportEnabled] = useState(
+    event?.transportEnabled ?? false
+  );
+  const [transportVehicle, setTransportVehicle] = useState(
+    event?.transportVehicle ?? ""
+  );
   const [startDate, setStartDate] = useState(
     initialStart ? format(initialStart, "yyyy-MM-dd") : defaultDate
   );
@@ -112,6 +126,12 @@ export function EventModal({
           startsAt: days[0].startsAt,
           endsAt: days[days.length - 1].endsAt,
           days,
+          loadingEnabled,
+          loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
+          transportEnabled,
+          transportVehicle: transportEnabled
+            ? transportVehicle.trim() || null
+            : null,
         });
         onClose();
       } finally {
@@ -133,6 +153,12 @@ export function EventModal({
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
         days: [],
+        loadingEnabled,
+        loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
+        transportEnabled,
+        transportVehicle: transportEnabled
+          ? transportVehicle.trim() || null
+          : null,
       });
       onClose();
     } finally {
@@ -237,6 +263,47 @@ export function EventModal({
               </div>
             </div>
           )}
+
+          <div className="space-y-2 rounded-md border border-border-subtle p-3">
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={loadingEnabled}
+                onChange={(e) => setLoadingEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-border-subtle accent-accent"
+              />
+              Załadunek
+            </label>
+            {loadingEnabled && (
+              <input
+                type="time"
+                value={loadingTime}
+                onChange={(e) => setLoadingTime(e.target.value)}
+                placeholder="Godzina załadunku"
+                className="w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+              />
+            )}
+          </div>
+
+          <div className="space-y-2 rounded-md border border-border-subtle p-3">
+            <label className="flex items-center gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={transportEnabled}
+                onChange={(e) => setTransportEnabled(e.target.checked)}
+                className="h-4 w-4 rounded border-border-subtle accent-accent"
+              />
+              Transport
+            </label>
+            {transportEnabled && (
+              <input
+                value={transportVehicle}
+                onChange={(e) => setTransportVehicle(e.target.value)}
+                placeholder="Auto, którym pojedzie ekipa"
+                className="w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+              />
+            )}
+          </div>
 
           {error && <p className="text-xs text-danger">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">

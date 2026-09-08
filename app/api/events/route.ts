@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseDaysInput } from "@/lib/eventDaysValidation";
 import { randomEventColor } from "@/lib/eventColors";
+import { parseLoadingTransportInput } from "@/lib/eventLoadingTransport";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -38,6 +39,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid event data" }, { status: 400 });
   }
 
+  const loadingTransport = parseLoadingTransportInput(body);
+
   // Multi-day creation: one independent event per day, numbered "Title i/N",
   // so each day can be assigned different people.
   if (Array.isArray(body.days) && body.days.length > 1) {
@@ -56,6 +59,7 @@ export async function POST(req: NextRequest) {
             endsAt: d.endsAt,
             color,
             groupId,
+            ...loadingTransport,
           },
         })
       )
@@ -82,7 +86,7 @@ export async function POST(req: NextRequest) {
   }
 
   const event = await prisma.event.create({
-    data: { title, startsAt, endsAt, color },
+    data: { title, startsAt, endsAt, color, ...loadingTransport },
   });
   return NextResponse.json(event, { status: 201 });
 }

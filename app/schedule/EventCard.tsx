@@ -62,6 +62,22 @@ export function EventCard({
             {event.title}
           </p>
           <p className="text-xs text-muted">{timeLabel}</p>
+          {(event.loadingEnabled || event.transportEnabled) && (
+            <p className="mt-0.5 text-xs text-muted/80">
+              {event.loadingEnabled && (
+                <span>
+                  Załadunek{event.loadingTime ? `: ${event.loadingTime}` : ""}
+                </span>
+              )}
+              {event.loadingEnabled && event.transportEnabled && " · "}
+              {event.transportEnabled && (
+                <span>
+                  Transport
+                  {event.transportVehicle ? `: ${event.transportVehicle}` : ""}
+                </span>
+              )}
+            </p>
+          )}
         </div>
         {!readOnly && (
           <button

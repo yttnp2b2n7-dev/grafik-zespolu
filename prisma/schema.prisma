@@ -32,13 +32,17 @@ model PersonSkill {
 }
 
 model Event {
-  id          String       @id @default(cuid())
-  title       String
-  startsAt    DateTime
-  endsAt      DateTime
-  color       String?
-  groupId     String?
-  assignments Assignment[]
+  id                String       @id @default(cuid())
+  title             String
+  startsAt          DateTime
+  endsAt            DateTime
+  color             String?
+  groupId           String?
+  loadingEnabled    Boolean      @default(false)
+  loadingTime       String?
+  transportEnabled  Boolean      @default(false)
+  transportVehicle  String?
+  assignments       Assignment[]
 
   @@index([groupId])
 }

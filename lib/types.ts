@@ -31,5 +31,9 @@ export type Event = {
   endsAt: string;
   color: string | null;
   groupId: string | null;
+  loadingEnabled: boolean;
+  loadingTime: string | null;
+  transportEnabled: boolean;
+  transportVehicle: string | null;
   assignments: Assignment[];
 };

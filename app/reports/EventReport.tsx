@@ -22,6 +22,17 @@ export function EventReport({ event }: { event: Event }) {
           <p className="mt-1 text-sm text-muted">
             {dateLabel} · {timeLabel}
           </p>
+          {(event.loadingEnabled || event.transportEnabled) && (
+            <p className="mt-1 text-xs text-muted">
+              {event.loadingEnabled && (
+                <span>Załadunek: {event.loadingTime || "-"}</span>
+              )}
+              {event.loadingEnabled && event.transportEnabled && " · "}
+              {event.transportEnabled && (
+                <span>Transport: {event.transportVehicle || "-"}</span>
+              )}
+            </p>
+          )}
         </div>
         <button
           onClick={handleCopy}

@@ -16,11 +16,18 @@ export function formatEventReportText(event: Event): string {
   const { dateLabel, timeLabel } = getEventDateTimeLabel(event);
   const people = event.assignments.map((a) => a.person.name).join(", ");
 
-  return [
+  const lines = [
     event.title,
     `${dateLabel}, ${timeLabel}`,
     `Przypisani: ${people || "brak"}`,
-  ].join("\n");
+  ];
+  if (event.loadingEnabled) {
+    lines.push(`Załadunek: ${event.loadingTime || "-"}`);
+  }
+  if (event.transportEnabled) {
+    lines.push(`Transport: ${event.transportVehicle || "-"}`);
+  }
+  return lines.join("\n");
 }
 
 export function formatWeekReportText(events: Event[], weekLabel: string): string {

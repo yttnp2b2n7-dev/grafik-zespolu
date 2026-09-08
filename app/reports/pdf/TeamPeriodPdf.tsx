@@ -57,6 +57,15 @@ export function TeamPeriodPdf({
               {event.assignments.map((a) => a.person.name).join(", ") ||
                 "brak"}
             </Text>
+            {(event.loadingEnabled || event.transportEnabled) && (
+              <Text style={styles.eventMeta}>
+                {event.loadingEnabled &&
+                  `Załadunek: ${event.loadingTime || "-"}`}
+                {event.loadingEnabled && event.transportEnabled && "  ·  "}
+                {event.transportEnabled &&
+                  `Transport: ${event.transportVehicle || "-"}`}
+              </Text>
+            )}
           </View>
         ))}
       </Page>

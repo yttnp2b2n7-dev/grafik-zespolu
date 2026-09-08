@@ -210,6 +210,10 @@ export default function SchedulePage() {
     startsAt: string;
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
+    loadingEnabled: boolean;
+    loadingTime: string | null;
+    transportEnabled: boolean;
+    transportVehicle: string | null;
   }) {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -228,6 +232,10 @@ export default function SchedulePage() {
       startsAt: string;
       endsAt: string;
       days?: { startsAt: string; endsAt: string }[];
+      loadingEnabled: boolean;
+      loadingTime: string | null;
+      transportEnabled: boolean;
+      transportVehicle: string | null;
     }
   ) {
     const res = await fetch(`/api/events/${eventId}`, {
