@@ -7,6 +7,11 @@ import Link from "next/link";
 import type { Event } from "@/lib/types";
 import { AssignmentChip } from "./AssignmentChip";
 import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
+import {
+  EVENT_TYPE_COLORS,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_LETTERS,
+} from "@/lib/eventType";
 
 export function EventCard({
   event,
@@ -61,27 +66,39 @@ export function EventCard({
       }
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-foreground">
-            {event.title}
-          </p>
-          <p className="text-xs text-muted">{timeLabel}</p>
-          {(event.loadingEnabled || event.transportEnabled) && (
-            <p className="mt-0.5 text-xs text-muted/80">
-              {event.loadingEnabled && (
-                <span>
-                  Załadunek{event.loadingTime ? `: ${event.loadingTime}` : ""}
-                </span>
-              )}
-              {event.loadingEnabled && event.transportEnabled && " · "}
-              {event.transportEnabled && (
-                <span>
-                  Transport
-                  {event.transportVehicle ? `: ${event.transportVehicle}` : ""}
-                </span>
-              )}
-            </p>
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          {event.eventType && (
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-base font-black leading-none text-white"
+              style={{ backgroundColor: EVENT_TYPE_COLORS[event.eventType] }}
+              title={EVENT_TYPE_LABELS[event.eventType]}
+              aria-label={EVENT_TYPE_LABELS[event.eventType]}
+            >
+              {EVENT_TYPE_LETTERS[event.eventType]}
+            </span>
           )}
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-medium text-foreground">
+              {event.title}
+            </p>
+            <p className="text-xs text-muted">{timeLabel}</p>
+            {(event.loadingEnabled || event.transportEnabled) && (
+              <p className="mt-0.5 text-xs text-muted/80">
+                {event.loadingEnabled && (
+                  <span>
+                    Załadunek{event.loadingTime ? `: ${event.loadingTime}` : ""}
+                  </span>
+                )}
+                {event.loadingEnabled && event.transportEnabled && " · "}
+                {event.transportEnabled && (
+                  <span>
+                    Transport
+                    {event.transportVehicle ? `: ${event.transportVehicle}` : ""}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
         </div>
         {!readOnly && (
           <button

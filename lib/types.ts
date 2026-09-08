@@ -1,3 +1,5 @@
+import type { EventType } from "./eventType";
+
 export type Skill = {
   id: string;
   name: string;
@@ -32,6 +34,7 @@ export type Event = {
   endsAt: string;
   color: string | null;
   groupId: string | null;
+  eventType: EventType | null;
   loadingEnabled: boolean;
   loadingTime: string | null;
   transportEnabled: boolean;

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseDaysInput } from "@/lib/eventDaysValidation";
 import { randomEventColor } from "@/lib/eventColors";
 import { parseLoadingTransportInput } from "@/lib/eventLoadingTransport";
+import { parseEventTypeInput } from "@/lib/eventType";
 
 export async function GET(
   _req: NextRequest,
@@ -38,6 +39,7 @@ export async function PATCH(
   }
 
   const loadingTransport = parseLoadingTransportInput(body);
+  const eventType = parseEventTypeInput(body.eventType);
 
   // Turning a single event into a multi-day range on edit: keep this
   // event as one day of the series and create independent events for the
@@ -92,6 +94,7 @@ export async function PATCH(
               startsAt: entry.startsAt,
               endsAt: entry.endsAt,
               groupId,
+              eventType,
               ...loadingTransport,
             },
           });
@@ -111,6 +114,7 @@ export async function PATCH(
             endsAt: entry.endsAt,
             groupId,
             color,
+            eventType,
             ...loadingTransport,
           },
         });
@@ -139,7 +143,7 @@ export async function PATCH(
 
   const event = await prisma.event.update({
     where: { id },
-    data: { title, startsAt, endsAt, ...loadingTransport },
+    data: { title, startsAt, endsAt, eventType, ...loadingTransport },
   });
   return NextResponse.json(event);
 }

@@ -31,6 +31,12 @@ model PersonSkill {
   @@id([personId, skillId])
 }
 
+enum EventType {
+  MONTAZ
+  OBSLUGA
+  DEMONTAZ
+}
+
 model Event {
   id                String       @id @default(cuid())
   title             String
@@ -38,6 +44,7 @@ model Event {
   endsAt            DateTime
   color             String?
   groupId           String?
+  eventType         EventType?
   loadingEnabled    Boolean      @default(false)
   loadingTime       String?
   transportEnabled  Boolean      @default(false)

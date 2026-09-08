@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { parseDaysInput } from "@/lib/eventDaysValidation";
 import { randomEventColor } from "@/lib/eventColors";
 import { parseLoadingTransportInput } from "@/lib/eventLoadingTransport";
+import { parseEventTypeInput } from "@/lib/eventType";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   const loadingTransport = parseLoadingTransportInput(body);
+  const eventType = parseEventTypeInput(body.eventType);
 
   // Multi-day creation: one independent event per day, numbered "Title i/N",
   // so each day can be assigned different people.
@@ -59,6 +61,7 @@ export async function POST(req: NextRequest) {
             endsAt: d.endsAt,
             color,
             groupId,
+            eventType,
             ...loadingTransport,
           },
         })
@@ -86,7 +89,7 @@ export async function POST(req: NextRequest) {
   }
 
   const event = await prisma.event.create({
-    data: { title, startsAt, endsAt, color, ...loadingTransport },
+    data: { title, startsAt, endsAt, color, eventType, ...loadingTransport },
   });
   return NextResponse.json(event, { status: 201 });
 }

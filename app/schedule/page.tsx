@@ -26,6 +26,13 @@ import { EventCard } from "./EventCard";
 import { EventModal } from "./EventModal";
 import { useSession } from "../session-context";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
+import {
+  EVENT_TYPE_COLORS,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_LETTERS,
+  EVENT_TYPE_OPTIONS,
+  type EventType,
+} from "@/lib/eventType";
 
 const DAY_LABELS = [
   "Poniedziałek",
@@ -274,6 +281,7 @@ export default function SchedulePage() {
     startsAt: string;
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
+    eventType: EventType | null;
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
@@ -296,6 +304,7 @@ export default function SchedulePage() {
       startsAt: string;
       endsAt: string;
       days?: { startsAt: string; endsAt: string }[];
+      eventType: EventType | null;
       loadingEnabled: boolean;
       loadingTime: string | null;
       transportEnabled: boolean;
@@ -398,7 +407,23 @@ export default function SchedulePage() {
             </aside>
           )}
 
-          <div className="overflow-x-auto">
+          <div>
+            <div className="mb-3 flex flex-wrap items-center gap-4 rounded-lg border border-border-subtle bg-surface/50 px-3 py-2">
+              {EVENT_TYPE_OPTIONS.map((type) => (
+                <div key={type} className="flex items-center gap-1.5">
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-xs font-black leading-none text-white"
+                    style={{ backgroundColor: EVENT_TYPE_COLORS[type] }}
+                  >
+                    {EVENT_TYPE_LETTERS[type]}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {EVENT_TYPE_LABELS[type]}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="overflow-x-auto">
             <div className="grid min-w-[1050px] grid-cols-7 gap-3">
               {days.map((day, i) => (
                 <div
@@ -490,6 +515,7 @@ export default function SchedulePage() {
 
                 return items;
               })}
+            </div>
             </div>
           </div>
         </div>

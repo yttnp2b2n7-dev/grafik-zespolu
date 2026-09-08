@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { eachDayOfInterval, format } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
+import {
+  EVENT_TYPE_COLORS,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_LETTERS,
+  EVENT_TYPE_OPTIONS,
+  type EventType,
+} from "@/lib/eventType";
 
 type DayTime = { start: string; end: string };
 
@@ -21,6 +28,7 @@ export function EventModal({
     startsAt: string;
     endsAt: string;
     days?: { startsAt: string; endsAt: string }[];
+    eventType: EventType | null;
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
@@ -31,6 +39,9 @@ export function EventModal({
   const initialEnd = event ? new Date(event.endsAt) : null;
 
   const [title, setTitle] = useState(event?.title ?? "");
+  const [eventType, setEventType] = useState<EventType | null>(
+    event?.eventType ?? null
+  );
   const [loadingEnabled, setLoadingEnabled] = useState(
     event?.loadingEnabled ?? false
   );
@@ -126,6 +137,7 @@ export function EventModal({
           startsAt: days[0].startsAt,
           endsAt: days[days.length - 1].endsAt,
           days,
+          eventType,
           loadingEnabled,
           loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
           transportEnabled,
@@ -153,6 +165,7 @@ export function EventModal({
         startsAt: startsAt.toISOString(),
         endsAt: endsAt.toISOString(),
         days: [],
+        eventType,
         loadingEnabled,
         loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
         transportEnabled,
@@ -182,6 +195,44 @@ export function EventModal({
               className="mt-1 w-full rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
             />
           </div>
+
+          <div>
+            <label className="text-xs text-muted">Rodzaj</label>
+            <div className="mt-1 flex gap-1.5">
+              {EVENT_TYPE_OPTIONS.map((type) => {
+                const active = eventType === type;
+                const color = EVENT_TYPE_COLORS[type];
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setEventType(active ? null : type)}
+                    className="flex flex-1 items-center justify-center gap-1.5 rounded-md border px-2 py-1.5 text-xs font-medium transition"
+                    style={
+                      active
+                        ? {
+                            borderColor: color,
+                            backgroundColor: `${color}22`,
+                            color,
+                          }
+                        : { borderColor: "var(--border-subtle)" }
+                    }
+                  >
+                    <span
+                      className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                      style={{ backgroundColor: color }}
+                    >
+                      {EVENT_TYPE_LETTERS[type]}
+                    </span>
+                    <span className={active ? "" : "text-muted"}>
+                      {EVENT_TYPE_LABELS[type]}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-muted">Data początku</label>
