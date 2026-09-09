@@ -20,6 +20,8 @@ export default function PeoplePage() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [newColor, setNewColor] = useState(PALETTE[0]);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,13 +51,20 @@ export default function PeoplePage() {
     const res = await fetch("/api/people", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, color: newColor }),
+      body: JSON.stringify({
+        name,
+        color: newColor,
+        email: newEmail.trim() || null,
+        phone: newPhone.trim() || null,
+      }),
     });
     if (!res.ok) {
       setError("Nie udało się dodać osoby");
       return;
     }
     setNewName("");
+    setNewEmail("");
+    setNewPhone("");
     setNewColor(PALETTE[Math.floor(Math.random() * PALETTE.length)]);
     await loadAll();
   }
@@ -65,14 +74,19 @@ export default function PeoplePage() {
     setPeople((prev) => prev.filter((p) => p.id !== id));
   }
 
-  async function renamePerson(id: string, name: string) {
+  async function updatePersonDetails(
+    id: string,
+    data: { name: string; email: string | null; phone: string | null }
+  ) {
     const res = await fetch(`/api/people/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(data),
     });
     if (!res.ok) return false;
-    setPeople((prev) => prev.map((p) => (p.id === id ? { ...p, name } : p)));
+    setPeople((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...data } : p))
+    );
     return true;
   }
 
@@ -127,6 +141,20 @@ export default function PeoplePage() {
           placeholder="Imię i nazwisko"
           className="min-w-[200px] flex-1 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
         />
+        <input
+          type="email"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          placeholder="E-mail (opcjonalnie)"
+          className="min-w-[180px] flex-1 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+        />
+        <input
+          type="tel"
+          value={newPhone}
+          onChange={(e) => setNewPhone(e.target.value)}
+          placeholder="Telefon (opcjonalnie)"
+          className="min-w-[150px] flex-1 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+        />
         <button
           type="submit"
           className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
@@ -152,7 +180,7 @@ export default function PeoplePage() {
             key={person.id}
             person={person}
             onRemove={() => removePerson(person.id)}
-            onRename={(name) => renamePerson(person.id, name)}
+            onSave={(data) => updatePersonDetails(person.id, data)}
             onAddSkill={(name) => addSkill(person.id, name)}
             onRemoveSkill={(skillId) => removeSkill(person.id, skillId)}
           />
@@ -165,20 +193,26 @@ export default function PeoplePage() {
 function PersonCard({
   person,
   onRemove,
-  onRename,
+  onSave,
   onAddSkill,
   onRemoveSkill,
 }: {
   person: Person;
   onRemove: () => void;
-  onRename: (name: string) => Promise<boolean>;
+  onSave: (data: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+  }) => Promise<boolean>;
   onAddSkill: (name: string) => void;
   onRemoveSkill: (skillId: string) => void;
 }) {
   const [skillInput, setSkillInput] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(person.name);
-  const [renameError, setRenameError] = useState(false);
+  const [emailInput, setEmailInput] = useState(person.email ?? "");
+  const [phoneInput, setPhoneInput] = useState(person.phone ?? "");
+  const [saveError, setSaveError] = useState(false);
 
   function submitSkill(e: React.FormEvent) {
     e.preventDefault();
@@ -189,27 +223,33 @@ function PersonCard({
 
   function startEditing() {
     setNameInput(person.name);
-    setRenameError(false);
+    setEmailInput(person.email ?? "");
+    setPhoneInput(person.phone ?? "");
+    setSaveError(false);
     setIsEditing(true);
   }
 
-  async function submitRename(e: React.FormEvent) {
+  async function submitDetails(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = nameInput.trim();
     if (!trimmed) return;
-    const ok = await onRename(trimmed);
+    const ok = await onSave({
+      name: trimmed,
+      email: emailInput.trim() || null,
+      phone: phoneInput.trim() || null,
+    });
     if (ok) {
       setIsEditing(false);
     } else {
-      setRenameError(true);
+      setSaveError(true);
     }
   }
 
   return (
     <div className="rounded-lg border border-border-subtle bg-surface p-4">
-      <div className="flex items-center justify-between">
-        {isEditing ? (
-          <form onSubmit={submitRename} className="flex flex-1 items-center gap-2">
+      {isEditing ? (
+        <form onSubmit={submitDetails} className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: person.color }}
@@ -217,9 +257,26 @@ function PersonCard({
             <input
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
+              placeholder="Imię i nazwisko"
               autoFocus
               className="min-w-0 flex-1 rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
             />
+          </div>
+          <input
+            type="email"
+            value={emailInput}
+            onChange={(e) => setEmailInput(e.target.value)}
+            placeholder="E-mail"
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          <input
+            type="tel"
+            value={phoneInput}
+            onChange={(e) => setPhoneInput(e.target.value)}
+            placeholder="Telefon"
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          <div className="flex items-center gap-3">
             <button
               type="submit"
               className="text-xs text-accent-hover transition hover:underline"
@@ -233,36 +290,58 @@ function PersonCard({
             >
               Anuluj
             </button>
-          </form>
-        ) : (
-          <>
+          </div>
+        </form>
+      ) : (
+        <div className="flex items-start justify-between">
+          <div>
             <div className="flex items-center gap-2.5">
               <span
-                className="h-2.5 w-2.5 rounded-full"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
                 style={{ backgroundColor: person.color }}
               />
               <span className="text-sm font-medium text-foreground">
                 {person.name}
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={startEditing}
-                className="text-xs text-muted transition hover:text-accent-hover"
-              >
-                Edytuj
-              </button>
-              <button
-                onClick={onRemove}
-                className="text-xs text-muted transition hover:text-danger"
-              >
-                Usuń
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-      {renameError && (
+            {(person.email || person.phone) && (
+              <div className="mt-1 flex flex-col gap-0.5 pl-5 text-xs text-muted">
+                {person.email && (
+                  <a
+                    href={`mailto:${person.email}`}
+                    className="hover:text-accent-hover hover:underline"
+                  >
+                    {person.email}
+                  </a>
+                )}
+                {person.phone && (
+                  <a
+                    href={`tel:${person.phone}`}
+                    className="hover:text-accent-hover hover:underline"
+                  >
+                    {person.phone}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              onClick={startEditing}
+              className="text-xs text-muted transition hover:text-accent-hover"
+            >
+              Edytuj
+            </button>
+            <button
+              onClick={onRemove}
+              className="text-xs text-muted transition hover:text-danger"
+            >
+              Usuń
+            </button>
+          </div>
+        </div>
+      )}
+      {saveError && (
         <p className="mt-1 text-xs text-danger">Nie udało się zapisać zmiany.</p>
       )}
 

@@ -15,6 +15,8 @@ export type Person = {
   id: string;
   name: string;
   color: string;
+  email: string | null;
+  phone: string | null;
   createdAt: string;
   skills: PersonSkill[];
 };

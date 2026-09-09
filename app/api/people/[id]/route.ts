@@ -13,7 +13,17 @@ export async function PATCH(
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const person = await prisma.person.update({ where: { id }, data: { name } });
+  const data: { name: string; email?: string | null; phone?: string | null } = {
+    name,
+  };
+  if ("email" in body) {
+    data.email = typeof body.email === "string" ? body.email.trim() || null : null;
+  }
+  if ("phone" in body) {
+    data.phone = typeof body.phone === "string" ? body.phone.trim() || null : null;
+  }
+
+  const person = await prisma.person.update({ where: { id }, data });
   return NextResponse.json(person);
 }
 

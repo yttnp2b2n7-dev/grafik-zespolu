@@ -11,6 +11,8 @@ model Person {
   id          String        @id @default(cuid())
   name        String
   color       String
+  email       String?
+  phone       String?
   createdAt   DateTime      @default(now())
   skills      PersonSkill[]
   assignments Assignment[]

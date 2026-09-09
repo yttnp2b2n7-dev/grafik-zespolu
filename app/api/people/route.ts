@@ -13,11 +13,15 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const color = typeof body.color === "string" ? body.color : "#7c9cff";
+  const email = typeof body.email === "string" ? body.email.trim() || null : null;
+  const phone = typeof body.phone === "string" ? body.phone.trim() || null : null;
 
   if (!name) {
     return NextResponse.json({ error: "Name is required" }, { status: 400 });
   }
 
-  const person = await prisma.person.create({ data: { name, color } });
+  const person = await prisma.person.create({
+    data: { name, color, email, phone },
+  });
   return NextResponse.json(person, { status: 201 });
 }
