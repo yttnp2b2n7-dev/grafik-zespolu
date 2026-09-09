@@ -359,8 +359,13 @@ export default function SchedulePage() {
     }
   }
 
-  const filteredPeople = people.filter((person) =>
-    person.name.toLowerCase().includes(personSearch.trim().toLowerCase())
+  const personSearchQuery = personSearch.trim().toLowerCase();
+  const filteredPeople = people.filter(
+    (person) =>
+      person.name.toLowerCase().includes(personSearchQuery) ||
+      person.skills.some((s) =>
+        s.skill.name.toLowerCase().includes(personSearchQuery)
+      )
   );
 
   const eventSearchQuery = eventSearch.trim().toLowerCase();
@@ -496,7 +501,7 @@ export default function SchedulePage() {
               <input
                 value={personSearch}
                 onChange={(e) => setPersonSearch(e.target.value)}
-                placeholder="Szukaj…"
+                placeholder="Szukaj po imieniu lub umiejętności…"
                 className="mb-2 w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
               />
               <div className="flex flex-col gap-1.5">
