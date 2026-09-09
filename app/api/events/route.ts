@@ -10,6 +10,7 @@ export async function GET(req: NextRequest) {
   const weekStart = searchParams.get("weekStart");
   const weekEnd = searchParams.get("weekEnd");
   const from = searchParams.get("from");
+  const to = searchParams.get("to");
 
   const where =
     weekStart && weekEnd
@@ -19,7 +20,9 @@ export async function GET(req: NextRequest) {
         }
       : from
         ? { endsAt: { gte: new Date(from) } }
-        : {};
+        : to
+          ? { endsAt: { lt: new Date(to) } }
+          : {};
 
   const events = await prisma.event.findMany({
     where,
@@ -28,7 +31,9 @@ export async function GET(req: NextRequest) {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
     },
-    orderBy: { startsAt: "asc" },
+    // Historical searches ("to") read best most-recent-first; everything
+    // else (weekly grid, upcoming search) reads chronologically forward.
+    orderBy: { startsAt: to ? "desc" : "asc" },
   });
   return NextResponse.json(events);
 }

@@ -115,10 +115,13 @@ export default function SchedulePage() {
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
   const [personSearch, setPersonSearch] = useState("");
   const [eventSearch, setEventSearch] = useState("");
+  const [historicalOnly, setHistoricalOnly] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [upcomingLoading, setUpcomingLoading] = useState(false);
+  const [historicalEvents, setHistoricalEvents] = useState<Event[]>([]);
+  const [historicalLoading, setHistoricalLoading] = useState(false);
   const isDraggingRef = useRef(false);
-  const isSearching = eventSearch.trim().length > 0;
+  const isSearching = eventSearch.trim().length > 0 || historicalOnly;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -144,6 +147,13 @@ export default function SchedulePage() {
     if (data) setUpcomingEvents(data);
   }, []);
 
+  const loadHistoricalEvents = useCallback(async () => {
+    const data = await fetchJsonOrNull<Event[]>(
+      `/api/events?to=${new Date().toISOString()}`
+    );
+    if (data) setHistoricalEvents(data);
+  }, []);
+
   useEffect(() => {
     if (isAdmin) loadPeople();
   }, [isAdmin, loadPeople]);
@@ -163,12 +173,20 @@ export default function SchedulePage() {
   }, [isAdmin, loadPeople, loadEvents]);
 
   useEffect(() => {
-    if (!isSearching) return;
+    if (!isSearching || historicalOnly) return;
     setUpcomingLoading(true);
     loadUpcomingEvents().finally(() => setUpcomingLoading(false));
     const interval = setInterval(loadUpcomingEvents, 5000);
     return () => clearInterval(interval);
-  }, [isSearching, loadUpcomingEvents]);
+  }, [isSearching, historicalOnly, loadUpcomingEvents]);
+
+  useEffect(() => {
+    if (!historicalOnly) return;
+    setHistoricalLoading(true);
+    loadHistoricalEvents().finally(() => setHistoricalLoading(false));
+    const interval = setInterval(loadHistoricalEvents, 5000);
+    return () => clearInterval(interval);
+  }, [historicalOnly, loadHistoricalEvents]);
 
   function handleDragStart(e: DragStartEvent) {
     isDraggingRef.current = true;
@@ -346,8 +364,10 @@ export default function SchedulePage() {
   );
 
   const eventSearchQuery = eventSearch.trim().toLowerCase();
+  const searchSource = historicalOnly ? historicalEvents : upcomingEvents;
+  const searchLoading = historicalOnly ? historicalLoading : upcomingLoading;
   const searchResults = isSearching
-    ? upcomingEvents.filter(
+    ? searchSource.filter(
         (ev) =>
           ev.title.toLowerCase().includes(eventSearchQuery) ||
           ev.assignments.some((a) =>
@@ -374,7 +394,7 @@ export default function SchedulePage() {
             placeholder="Szukaj wydarzenia po nazwie lub osobie…"
             className="w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
           />
-          {isSearching && (
+          {eventSearch.length > 0 && (
             <button
               onClick={() => setEventSearch("")}
               aria-label="Wyczyść wyszukiwanie"
@@ -384,15 +404,26 @@ export default function SchedulePage() {
             </button>
           )}
         </div>
+        <label className="mt-2 flex items-center gap-2 text-xs text-muted">
+          <input
+            type="checkbox"
+            checked={historicalOnly}
+            onChange={(e) => setHistoricalOnly(e.target.checked)}
+            className="h-3.5 w-3.5 rounded border-border-subtle accent-accent"
+          />
+          Pokaż tylko historyczne
+        </label>
 
         {isSearching ? (
           <div className="mt-6 flex flex-col gap-3">
-            {upcomingLoading && upcomingEvents.length === 0 && (
+            {searchLoading && searchSource.length === 0 && (
               <p className="text-sm text-muted">Ładowanie…</p>
             )}
-            {!upcomingLoading && searchResults.length === 0 && (
+            {!searchLoading && searchResults.length === 0 && (
               <p className="text-sm text-muted">
-                Brak nadchodzących wydarzeń pasujących do wyszukiwania.
+                {historicalOnly
+                  ? "Brak historycznych wydarzeń pasujących do wyszukiwania."
+                  : "Brak nadchodzących wydarzeń pasujących do wyszukiwania."}
               </p>
             )}
             {searchResults.map((event) => (
