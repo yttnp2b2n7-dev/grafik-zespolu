@@ -12,9 +12,11 @@ import {
 export function EventDetailsModal({
   event,
   onClose,
+  hideSkills,
 }: {
   event: Event;
   onClose: () => void;
+  hideSkills?: boolean;
 }) {
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
@@ -100,7 +102,7 @@ export function EventDetailsModal({
                     </span>
                   )}
                   <span className="text-foreground">{a.person.name}</span>
-                  {a.person.skills.length > 0 && (
+                  {!hideSkills && a.person.skills.length > 0 && (
                     <span className="text-xs text-muted">
                       ({a.person.skills.map((s) => s.skill.name).join(", ")})
                     </span>

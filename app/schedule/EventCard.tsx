@@ -183,7 +183,11 @@ export function EventCard({
       </div>
 
       {showDetails && (
-        <EventDetailsModal event={event} onClose={() => setShowDetails(false)} />
+        <EventDetailsModal
+          event={event}
+          onClose={() => setShowDetails(false)}
+          hideSkills={readOnly}
+        />
       )}
     </div>
   );
