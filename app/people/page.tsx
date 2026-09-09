@@ -24,6 +24,7 @@ export default function PeoplePage() {
   const [newPhone, setNewPhone] = useState("");
   const [newColor, setNewColor] = useState(PALETTE[0]);
   const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   async function loadAll() {
     const [peopleData, skillsData] = await Promise.all([
@@ -42,6 +43,15 @@ export default function PeoplePage() {
   }, []);
 
   const skillNames = useMemo(() => skills.map((s) => s.name), [skills]);
+
+  const searchQuery = search.trim().toLowerCase();
+  const filteredPeople = people.filter(
+    (person) =>
+      person.name.toLowerCase().includes(searchQuery) ||
+      person.skills.some((s) =>
+        s.skill.name.toLowerCase().includes(searchQuery)
+      )
+  );
 
   async function addPerson(e: React.FormEvent) {
     e.preventDefault();
@@ -170,12 +180,22 @@ export default function PeoplePage() {
         ))}
       </datalist>
 
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Szukaj po imieniu lub umiejętności…"
+        className="mt-4 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+      />
+
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {loading && <p className="text-sm text-muted">Ładowanie…</p>}
         {!loading && people.length === 0 && (
           <p className="text-sm text-muted">Brak osób. Dodaj pierwszą powyżej.</p>
         )}
-        {people.map((person) => (
+        {!loading && people.length > 0 && filteredPeople.length === 0 && (
+          <p className="text-sm text-muted">Brak osób pasujących do wyszukiwania.</p>
+        )}
+        {filteredPeople.map((person) => (
           <PersonCard
             key={person.id}
             person={person}
