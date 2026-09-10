@@ -120,6 +120,7 @@ export default function SchedulePage() {
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [historicalEvents, setHistoricalEvents] = useState<Event[]>([]);
   const [historicalLoading, setHistoricalLoading] = useState(false);
+  const [freeDayFilter, setFreeDayFilter] = useState<number | null>(null);
   const isDraggingRef = useRef(false);
   const isSearching = eventSearch.trim().length > 0 || historicalOnly;
 
@@ -162,6 +163,10 @@ export default function SchedulePage() {
     setLoading(true);
     loadEvents().finally(() => setLoading(false));
   }, [loadEvents]);
+
+  useEffect(() => {
+    setFreeDayFilter(null);
+  }, [weekStart]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -359,13 +364,25 @@ export default function SchedulePage() {
     }
   }
 
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+
+  const freeDayAssignedIds =
+    freeDayFilter !== null
+      ? new Set(
+          events
+            .filter((ev) => isSameDay(new Date(ev.startsAt), days[freeDayFilter]))
+            .flatMap((ev) => ev.assignments.map((a) => a.personId))
+        )
+      : null;
+
   const personSearchQuery = personSearch.trim().toLowerCase();
   const filteredPeople = people.filter(
     (person) =>
-      person.name.toLowerCase().includes(personSearchQuery) ||
-      person.skills.some((s) =>
-        s.skill.name.toLowerCase().includes(personSearchQuery)
-      )
+      (person.name.toLowerCase().includes(personSearchQuery) ||
+        person.skills.some((s) =>
+          s.skill.name.toLowerCase().includes(personSearchQuery)
+        )) &&
+      (!freeDayAssignedIds || !freeDayAssignedIds.has(person.id))
   );
 
   const eventSearchQuery = eventSearch.trim().toLowerCase();
@@ -381,7 +398,6 @@ export default function SchedulePage() {
       )
     : [];
 
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const singleDayEvents = events.filter((ev) => !ev.groupId);
   const groupRows = packEventGroups(events, weekStart);
 
@@ -498,6 +514,21 @@ export default function SchedulePage() {
               <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
                 Ludzie
               </p>
+              {freeDayFilter !== null && (
+                <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-accent/10 px-2 py-1 text-[11px] text-accent">
+                  <span>
+                    Wolni: {DAY_LABELS[freeDayFilter]}{" "}
+                    {format(days[freeDayFilter], "d MMM", { locale: pl })}
+                  </span>
+                  <button
+                    onClick={() => setFreeDayFilter(null)}
+                    aria-label="Wyczyść filtr wolnych osób"
+                    className="shrink-0 text-accent transition hover:text-accent-hover"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
               <input
                 value={personSearch}
                 onChange={(e) => setPersonSearch(e.target.value)}
@@ -552,6 +583,20 @@ export default function SchedulePage() {
                   <p className="text-xs text-muted/70">
                     {format(day, "d MMM", { locale: pl })}
                   </p>
+                  {isAdmin && (
+                    <button
+                      onClick={() =>
+                        setFreeDayFilter((prev) => (prev === i ? null : i))
+                      }
+                      className={`mt-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition ${
+                        freeDayFilter === i
+                          ? "bg-accent text-white"
+                          : "border border-border-subtle text-muted hover:border-accent hover:text-foreground"
+                      }`}
+                    >
+                      Wolni
+                    </button>
+                  )}
                 </div>
               ))}
 
