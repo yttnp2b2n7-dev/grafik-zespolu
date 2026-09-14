@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,6 +12,7 @@ import {
   startOfMonth,
   startOfWeek,
   startOfYear,
+  subDays,
   subMonths,
   subWeeks,
   subYears,
@@ -86,7 +87,7 @@ function SingleEventReport({ eventId }: { eventId: string }) {
   );
 }
 
-type PeriodType = "week" | "month" | "year";
+type PeriodType = "week" | "month" | "year" | "custom";
 
 function periodRange(type: PeriodType, ref: Date) {
   if (type === "week") {
@@ -132,6 +133,7 @@ const PERIOD_LABELS: Record<PeriodType, string> = {
   week: "Tydzień",
   month: "Miesiąc",
   year: "Rok",
+  custom: "Własny zakres",
 };
 
 function PeriodReport() {
@@ -143,15 +145,23 @@ function PeriodReport() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [generating, setGenerating] = useState<"pdf" | "word" | null>(null);
+  const [customFrom, setCustomFrom] = useState(() =>
+    format(subDays(new Date(), 7), "yyyy-MM-dd")
+  );
+  const [customTo, setCustomTo] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState<
+    { ok: true; to: string } | { ok: false; error: string } | null
+  >(null);
 
-  const { start, end } = useMemo(
-    () => periodRange(periodType, refDate),
-    [periodType, refDate]
-  );
-  const label = useMemo(
-    () => periodLabel(periodType, refDate),
-    [periodType, refDate]
-  );
+  const { start, end } =
+    periodType === "custom"
+      ? { start: new Date(`${customFrom}T00:00:00`), end: addDays(new Date(`${customTo}T00:00:00`), 1) }
+      : periodRange(periodType, refDate);
+  const label =
+    periodType === "custom"
+      ? `${format(new Date(`${customFrom}T00:00:00`), "d MMM yyyy", { locale: pl })} – ${format(new Date(`${customTo}T00:00:00`), "d MMM yyyy", { locale: pl })}`
+      : periodLabel(periodType, refDate);
 
   const loadEvents = useCallback(async () => {
     const data = await fetchJsonOrNull<Event[]>(
@@ -175,6 +185,10 @@ function PeriodReport() {
     const interval = setInterval(loadEvents, 5000);
     return () => clearInterval(interval);
   }, [loadEvents]);
+
+  useEffect(() => {
+    setEmailResult(null);
+  }, [personId, periodType, refDate, customFrom, customTo]);
 
   const selectedPerson = people.find((p) => p.id === personId) ?? null;
   const shifts: PersonShift[] = selectedPerson
@@ -214,6 +228,34 @@ function PeriodReport() {
       }
     } finally {
       setGenerating(null);
+    }
+  }
+
+  async function handleSendEmail() {
+    if (!selectedPerson) return;
+    setSendingEmail(true);
+    setEmailResult(null);
+    try {
+      const res = await fetch("/api/reports/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          personId: selectedPerson.id,
+          periodLabel: label,
+          from: start.toISOString(),
+          to: end.toISOString(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailResult({ ok: true, to: data.to });
+      } else {
+        setEmailResult({ ok: false, error: data.error ?? "Nie udało się wysłać" });
+      }
+    } catch {
+      setEmailResult({ ok: false, error: "Nie udało się wysłać" });
+    } finally {
+      setSendingEmail(false);
     }
   }
 
@@ -263,27 +305,47 @@ function PeriodReport() {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => setRefDate((d) => shiftPeriod(periodType, d, -1))}
-          className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
-          aria-label="Poprzedni okres"
-        >
-          ←
-        </button>
-        <div className="min-w-[140px] text-sm text-foreground">{label}</div>
-        <button
-          onClick={() => setRefDate((d) => shiftPeriod(periodType, d, 1))}
-          className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
-          aria-label="Następny okres"
-        >
-          →
-        </button>
-        <button
-          onClick={() => setRefDate(new Date())}
-          className="rounded-md px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
-        >
-          Dziś
-        </button>
+        {periodType === "custom" ? (
+          <>
+            <input
+              type="date"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+            />
+            <span className="text-sm text-muted">–</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+            />
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setRefDate((d) => shiftPeriod(periodType, d, -1))}
+              className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+              aria-label="Poprzedni okres"
+            >
+              ←
+            </button>
+            <div className="min-w-[140px] text-sm text-foreground">{label}</div>
+            <button
+              onClick={() => setRefDate((d) => shiftPeriod(periodType, d, 1))}
+              className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+              aria-label="Następny okres"
+            >
+              →
+            </button>
+            <button
+              onClick={() => setRefDate(new Date())}
+              className="rounded-md px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
+            >
+              Dziś
+            </button>
+          </>
+        )}
 
         <select
           value={personId}
@@ -316,7 +378,31 @@ function PeriodReport() {
             {generating === "word" ? "Generowanie…" : "Pobierz Word"}
           </button>
         )}
+        {selectedPerson && selectedPerson.email && (
+          <button
+            onClick={handleSendEmail}
+            disabled={sendingEmail || shifts.length === 0}
+            className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground disabled:opacity-50"
+          >
+            {sendingEmail ? "Wysyłanie…" : `Wyślij e-mailem (${selectedPerson.email})`}
+          </button>
+        )}
+        {selectedPerson && !selectedPerson.email && (
+          <p className="flex items-center px-1 text-xs text-muted/60">
+            Brak adresu e-mail — dodaj go w zakładce „Ludzie”, żeby móc wysłać raport.
+          </p>
+        )}
       </div>
+
+      {emailResult && (
+        <p
+          className={`mt-2 text-xs ${emailResult.ok ? "text-emerald-500" : "text-red-500"}`}
+        >
+          {emailResult.ok
+            ? `Wysłano raport na adres ${emailResult.to}.`
+            : `Błąd wysyłki: ${emailResult.error}`}
+        </p>
+      )}
 
       <div className="mt-6 flex flex-col gap-3">
         {loading && <p className="text-sm text-muted">Ładowanie…</p>}
