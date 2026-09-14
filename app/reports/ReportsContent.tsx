@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -154,14 +154,23 @@ function PeriodReport() {
     { ok: true; to: string } | { ok: false; error: string } | null
   >(null);
 
-  const { start, end } =
-    periodType === "custom"
-      ? { start: new Date(`${customFrom}T00:00:00`), end: addDays(new Date(`${customTo}T00:00:00`), 1) }
-      : periodRange(periodType, refDate);
-  const label =
-    periodType === "custom"
-      ? `${format(new Date(`${customFrom}T00:00:00`), "d MMM yyyy", { locale: pl })} – ${format(new Date(`${customTo}T00:00:00`), "d MMM yyyy", { locale: pl })}`
-      : periodLabel(periodType, refDate);
+  const { start, end } = useMemo(
+    () =>
+      periodType === "custom"
+        ? {
+            start: new Date(`${customFrom}T00:00:00`),
+            end: addDays(new Date(`${customTo}T00:00:00`), 1),
+          }
+        : periodRange(periodType, refDate),
+    [periodType, refDate, customFrom, customTo]
+  );
+  const label = useMemo(
+    () =>
+      periodType === "custom"
+        ? `${format(new Date(`${customFrom}T00:00:00`), "d MMM yyyy", { locale: pl })} – ${format(new Date(`${customTo}T00:00:00`), "d MMM yyyy", { locale: pl })}`
+        : periodLabel(periodType, refDate),
+    [periodType, refDate, customFrom, customTo]
+  );
 
   const loadEvents = useCallback(async () => {
     const data = await fetchJsonOrNull<Event[]>(

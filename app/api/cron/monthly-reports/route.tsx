@@ -7,7 +7,17 @@ import { computePersonShifts } from "@/lib/personShifts";
 import { getResendClient, getReportFromAddress } from "@/lib/resend";
 import { registerPdfFontsServer } from "@/app/reports/pdf/registerFonts";
 import { PersonPeriodPdf } from "@/app/reports/pdf/PersonPeriodPdfBase";
+import { buildPersonReportDocx } from "@/lib/personReportDocx";
 import type { Event } from "@/lib/types";
+
+function slug(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
@@ -59,18 +69,19 @@ export async function GET(req: NextRequest) {
         shifts={shifts}
       />
     );
+    const docxBlob = await buildPersonReportDocx(person.name, periodLabel, shifts);
+    const docxBuffer = Buffer.from(await docxBlob.arrayBuffer());
+    const filenameBase = `raport-${slug(person.name)}-${slug(periodLabel)}`;
 
     try {
       await resend.emails.send({
         from,
         to: person.email as string,
         subject: `Raport pracy – ${periodLabel}`,
-        text: `Cześć ${person.name},\n\nW załączniku znajdziesz raport przepracowanych zmian za ${periodLabel}.\n\nGrafik ImpactVision`,
+        text: `Cześć ${person.name},\n\nW załączniku znajdziesz raport przepracowanych zmian za ${periodLabel} w dwóch formatach — PDF oraz Word (edytowalny, gdybyś chciał/a dopisać swoje uwagi).\n\nGrafik ImpactVision`,
         attachments: [
-          {
-            filename: `raport-${periodLabel.toLowerCase().replace(/\s+/g, "-")}.pdf`,
-            content: pdfBuffer,
-          },
+          { filename: `${filenameBase}.pdf`, content: pdfBuffer },
+          { filename: `${filenameBase}.docx`, content: docxBuffer },
         ],
       });
       results.push({ person: person.name, status: "sent" });

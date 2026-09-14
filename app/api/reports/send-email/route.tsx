@@ -5,6 +5,7 @@ import { computePersonShifts } from "@/lib/personShifts";
 import { getResendClient, getReportFromAddress } from "@/lib/resend";
 import { registerPdfFontsServer } from "@/app/reports/pdf/registerFonts";
 import { PersonPeriodPdf } from "@/app/reports/pdf/PersonPeriodPdfBase";
+import { buildPersonReportDocx } from "@/lib/personReportDocx";
 import type { Event } from "@/lib/types";
 
 function slug(text: string) {
@@ -62,6 +63,9 @@ export async function POST(req: NextRequest) {
   const pdfBuffer = await renderToBuffer(
     <PersonPeriodPdf personName={person.name} periodLabel={periodLabel} shifts={shifts} />
   );
+  const docxBlob = await buildPersonReportDocx(person.name, periodLabel, shifts);
+  const docxBuffer = Buffer.from(await docxBlob.arrayBuffer());
+  const filenameBase = `raport-${slug(person.name)}-${slug(periodLabel)}`;
 
   const resend = getResendClient();
   try {
@@ -69,9 +73,10 @@ export async function POST(req: NextRequest) {
       from: getReportFromAddress(),
       to: person.email,
       subject: `Raport pracy – ${periodLabel}`,
-      text: `Cześć ${person.name},\n\nW załączniku znajdziesz raport przepracowanych zmian za okres: ${periodLabel}.\n\nGrafik ImpactVision`,
+      text: `Cześć ${person.name},\n\nW załączniku znajdziesz raport przepracowanych zmian za okres: ${periodLabel} w dwóch formatach — PDF oraz Word (edytowalny, gdybyś chciał/a dopisać swoje uwagi).\n\nGrafik ImpactVision`,
       attachments: [
-        { filename: `raport-${slug(person.name)}-${slug(periodLabel)}.pdf`, content: pdfBuffer },
+        { filename: `${filenameBase}.pdf`, content: pdfBuffer },
+        { filename: `${filenameBase}.docx`, content: docxBuffer },
       ],
     });
   } catch (err) {
