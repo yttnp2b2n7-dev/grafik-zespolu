@@ -19,7 +19,13 @@ import {
   totalMinutes,
 } from "@/lib/personShifts";
 
-const COL = { date: 18, time: 14, title: 24, rate: 14, notes: 30 };
+// A4 content width in twips (11906 page width - 1440*2 margins), split into
+// absolute column widths. The `docx` library needs an explicit tblGrid to
+// render reliably in Word - relying on percentage-only cell widths leaves it
+// to generate its own (tiny, mismatched) grid, which is what caused rows to
+// render as garbled/overlapping text.
+const COL = { date: 1625, time: 1264, title: 2166, rate: 1264, notes: 2708 };
+const TABLE_WIDTH = COL.date + COL.time + COL.title + COL.rate + COL.notes;
 const COLUMN_COUNT = 5;
 
 const rowBorder = {
@@ -28,7 +34,7 @@ const rowBorder = {
 
 function headerCell(text: string, size: number) {
   return new TableCell({
-    width: { size, type: WidthType.PERCENTAGE },
+    width: { size, type: WidthType.DXA },
     borders: rowBorder,
     children: [
       new Paragraph({ children: [new TextRun({ text, bold: true })] }),
@@ -38,7 +44,7 @@ function headerCell(text: string, size: number) {
 
 function cell(text: string, size: number) {
   return new TableCell({
-    width: { size, type: WidthType.PERCENTAGE },
+    width: { size, type: WidthType.DXA },
     borders: rowBorder,
     children: [new Paragraph(text)],
   });
@@ -47,7 +53,7 @@ function cell(text: string, size: number) {
 function spanningCell(text: string, bold: boolean, shading?: string) {
   return new TableCell({
     columnSpan: COLUMN_COUNT,
-    width: { size: 100, type: WidthType.PERCENTAGE },
+    width: { size: TABLE_WIDTH, type: WidthType.DXA },
     shading: shading ? { fill: shading } : undefined,
     borders: rowBorder,
     children: [new Paragraph({ children: [new TextRun({ text, bold })] })],
@@ -130,7 +136,8 @@ export async function buildPersonReportDocx(
           shifts.length === 0
             ? new Paragraph({ text: "Brak zmian w tym okresie." })
             : new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
+                width: { size: TABLE_WIDTH, type: WidthType.DXA },
+                columnWidths: [COL.date, COL.time, COL.title, COL.rate, COL.notes],
                 rows: tableRows,
               }),
         ],
