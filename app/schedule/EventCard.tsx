@@ -34,6 +34,32 @@ export function EventCard({
   readOnly?: boolean;
 }) {
   const [showDetails, setShowDetails] = useState(false);
+  const [sendingSms, setSendingSms] = useState(false);
+  const [smsResult, setSmsResult] = useState<string | null>(null);
+
+  async function handleSendSms() {
+    setSendingSms(true);
+    setSmsResult(null);
+    try {
+      const res = await fetch(`/api/events/${event.id}/send-sms`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const skippedText =
+          data.skipped.length > 0
+            ? ` (bez numeru: ${data.skipped.join(", ")})`
+            : "";
+        setSmsResult(`Wysłano SMS do ${data.sent} osób${skippedText}.`);
+      } else {
+        setSmsResult(`Błąd: ${data.error}`);
+      }
+    } catch {
+      setSmsResult("Błąd wysyłki SMS");
+    } finally {
+      setSendingSms(false);
+    }
+  }
   const { setNodeRef, isOver } = useDroppable({
     id: `event-${event.id}`,
     data: { type: "event", eventId: event.id },
@@ -167,6 +193,18 @@ export function EventCard({
             >
               Raport
             </Link>
+            {event.assignments.length > 0 && (
+              <>
+                <span>·</span>
+                <button
+                  onClick={handleSendSms}
+                  disabled={sendingSms}
+                  className="underline-offset-2 transition hover:text-accent-hover hover:underline disabled:opacity-50"
+                >
+                  {sendingSms ? "Wysyłanie…" : "Powiadom ekipę"}
+                </button>
+              </>
+            )}
             {onCopyFromPreviousDay && (
               <>
                 <span>·</span>
@@ -181,6 +219,9 @@ export function EventCard({
           </>
         )}
       </div>
+      {smsResult && (
+        <p className="mt-1 text-[11px] text-muted/80">{smsResult}</p>
+      )}
 
       {showDetails && (
         <EventDetailsModal
