@@ -31,7 +31,7 @@ export async function POST(
   const timeLabel = isSameDay(start, end)
     ? `${format(start, "d.MM")} ${format(start, "HH:mm")}-${format(end, "HH:mm")}`
     : `${format(start, "d.MM HH:mm")}-${format(end, "d.MM HH:mm")}`;
-  const text = `Przypisanie: ${event.title}, ${timeLabel}. Grafik ImpactVision`;
+  const text = `Cześć!\nMasz robotę do wykonania!\nKlapek oczekuje cię ${timeLabel}\nOdwiedź grafik a dowiesz się więcej na temat tej sztuki.`;
 
   try {
     const result = await sendBulkSms(

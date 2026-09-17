@@ -20,6 +20,9 @@ export async function sendBulkSms(
   params.set("text", text);
   params.set("utf", "true");
   params.set("details", "true");
+  // A predefined, pre-authorized sender name - without one, messages default
+  // to SMS ECO, which this account isn't permitted to send.
+  params.set("sender", process.env.SERWERSMS_SENDER ?? "PRZYPOMINAM");
 
   const res = await fetch(API_URL, {
     method: "POST",
@@ -31,8 +34,10 @@ export async function sendBulkSms(
   });
 
   const data = await res.json();
-  if (!res.ok || data.success === false) {
-    throw new Error(data.error ?? `SerwerSMS.pl error (HTTP ${res.status})`);
+  if (!res.ok || data.success === false || data.error) {
+    const message =
+      typeof data.error === "object" ? data.error?.message : data.error;
+    throw new Error(message ?? `SerwerSMS.pl error (HTTP ${res.status})`);
   }
   return { success: data.success, queued: data.queued, unsent: data.unsent };
 }
