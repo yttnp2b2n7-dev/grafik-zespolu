@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { pl } from "date-fns/locale";
 import type { Event } from "@/lib/types";
@@ -8,6 +9,7 @@ import {
   EVENT_TYPE_LABELS,
   EVENT_TYPE_LETTERS,
 } from "@/lib/eventType";
+import { RecruitCrewModal } from "./RecruitCrewModal";
 
 export function EventDetailsModal({
   event,
@@ -18,6 +20,7 @@ export function EventDetailsModal({
   onClose: () => void;
   hideSkills?: boolean;
 }) {
+  const [showRecruit, setShowRecruit] = useState(false);
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
   const timeLabel = isSameDay(start, end)
@@ -113,7 +116,15 @@ export function EventDetailsModal({
           )}
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex justify-end gap-2">
+          {!hideSkills && (
+            <button
+              onClick={() => setShowRecruit(true)}
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
+            >
+              Szukaj ekipy
+            </button>
+          )}
           <button
             onClick={onClose}
             className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
@@ -122,6 +133,10 @@ export function EventDetailsModal({
           </button>
         </div>
       </div>
+
+      {showRecruit && (
+        <RecruitCrewModal event={event} onClose={() => setShowRecruit(false)} />
+      )}
     </div>
   );
 }
