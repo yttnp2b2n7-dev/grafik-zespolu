@@ -9,7 +9,9 @@ import {
   EVENT_TYPE_LABELS,
   EVENT_TYPE_LETTERS,
 } from "@/lib/eventType";
-import { RecruitCrewModal } from "./RecruitCrewModal";
+import { CrewSmsModal } from "./CrewSmsModal";
+
+const EXTERNAL_SKILL = "zewnętrzny";
 
 export function EventDetailsModal({
   event,
@@ -20,38 +22,21 @@ export function EventDetailsModal({
   onClose: () => void;
   hideSkills?: boolean;
 }) {
-  const [showRecruit, setShowRecruit] = useState(false);
-  const [sendingSms, setSendingSms] = useState(false);
-  const [smsResult, setSmsResult] = useState<string | null>(null);
-
-  async function handleSendSms() {
-    setSendingSms(true);
-    setSmsResult(null);
-    try {
-      const res = await fetch(`/api/events/${event.id}/send-sms`, {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const skippedText =
-          data.skipped.length > 0
-            ? ` (bez numeru: ${data.skipped.join(", ")})`
-            : "";
-        setSmsResult(`Wysłano SMS do ${data.sent} osób${skippedText}.`);
-      } else {
-        setSmsResult(`Błąd: ${data.error}`);
-      }
-    } catch {
-      setSmsResult("Błąd wysyłki SMS");
-    } finally {
-      setSendingSms(false);
-    }
-  }
+  const [activeSmsModal, setActiveSmsModal] = useState<"notify" | "recruit" | null>(
+    null
+  );
 
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
   const timeLabel = isSameDay(start, end)
     ? `${format(start, "d MMMM yyyy, EEEE", { locale: pl })} · ${format(start, "HH:mm")}–${format(end, "HH:mm")}`
+    : `${format(start, "d MMM yyyy HH:mm", { locale: pl })} – ${format(end, "d MMM yyyy HH:mm", { locale: pl })}`;
+  // Matches the exact wording already confirmed working for each message.
+  const notifyDateLabel = isSameDay(start, end)
+    ? `${format(start, "d.MM")} ${format(start, "HH:mm")}-${format(end, "HH:mm")}`
+    : `${format(start, "d.MM HH:mm")}-${format(end, "d.MM HH:mm")}`;
+  const recruitDateLabel = isSameDay(start, end)
+    ? `${format(start, "d MMMM yyyy", { locale: pl })}, ${format(start, "HH:mm")}–${format(end, "HH:mm")}`
     : `${format(start, "d MMM yyyy HH:mm", { locale: pl })} – ${format(end, "d MMM yyyy HH:mm", { locale: pl })}`;
 
   return (
@@ -143,23 +128,18 @@ export function EventDetailsModal({
           )}
         </div>
 
-        {!hideSkills && smsResult && (
-          <p className="mt-2 text-xs text-muted/80">{smsResult}</p>
-        )}
-
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           {!hideSkills && event.assignments.length > 0 && (
             <button
-              onClick={handleSendSms}
-              disabled={sendingSms}
-              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground disabled:opacity-50"
+              onClick={() => setActiveSmsModal("notify")}
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
             >
-              {sendingSms ? "Wysyłanie…" : "Powiadom ekipę"}
+              Powiadom ekipę
             </button>
           )}
           {!hideSkills && (
             <button
-              onClick={() => setShowRecruit(true)}
+              onClick={() => setActiveSmsModal("recruit")}
               className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
             >
               Szukaj ekipy
@@ -174,8 +154,31 @@ export function EventDetailsModal({
         </div>
       </div>
 
-      {showRecruit && (
-        <RecruitCrewModal event={event} onClose={() => setShowRecruit(false)} />
+      {activeSmsModal === "notify" && (
+        <CrewSmsModal
+          heading={`Powiadom ekipę — ${event.title}`}
+          subtitle="Wysyłka SMS do osób przypisanych do tego wydarzenia"
+          emptyMessage="Brak osób przypisanych do tego wydarzenia."
+          candidateFilter={(p) =>
+            event.assignments.some((a) => a.personId === p.id)
+          }
+          defaultMessage={`Cześć!\nMasz robotę do wykonania!\nKlapek oczekuje cię ${notifyDateLabel}\nOdwiedź grafik a dowiesz się więcej na temat tej sztuki.`}
+          preselectAll
+          onClose={() => setActiveSmsModal(null)}
+        />
+      )}
+
+      {activeSmsModal === "recruit" && (
+        <CrewSmsModal
+          heading={`Szukaj ekipy — ${event.title}`}
+          subtitle="Wysyłka SMS do zewnętrznych osób (tag „zewnętrzny” w umiejętnościach)"
+          emptyMessage={`Brak osób oznaczonych tagiem „zewnętrzny” w umiejętnościach. Dodaj go osobom w zakładce „Ludzie”.`}
+          candidateFilter={(p) =>
+            p.skills.some((s) => s.skill.name.toLowerCase() === EXTERNAL_SKILL)
+          }
+          defaultMessage={`Cześć !\nSzukamy dodatkowego technika na Event ${event.title} (${recruitDateLabel})\nJeśli masz wolny termin odezwij się do Gabrysi 504064410`}
+          onClose={() => setActiveSmsModal(null)}
+        />
       )}
     </div>
   );

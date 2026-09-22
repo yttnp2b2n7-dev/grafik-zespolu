@@ -1,65 +1,66 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format, isSameDay } from "date-fns";
-import { pl } from "date-fns/locale";
-import type { Event, Person } from "@/lib/types";
+import type { Person } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 
-const EXTERNAL_SKILL = "zewnętrzny";
-
-export function RecruitCrewModal({
-  event,
+export function CrewSmsModal({
+  heading,
+  subtitle,
+  emptyMessage,
+  candidateFilter,
+  defaultMessage,
+  preselectAll,
   onClose,
 }: {
-  event: Event;
+  heading: string;
+  subtitle: string;
+  emptyMessage: string;
+  candidateFilter: (person: Person) => boolean;
+  defaultMessage: string;
+  preselectAll?: boolean;
   onClose: () => void;
 }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [skillFilter, setSkillFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [message, setMessage] = useState(defaultMessage);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<
     { ok: true; sent: number; skipped: string[] } | { ok: false; error: string } | null
   >(null);
 
-  const start = new Date(event.startsAt);
-  const end = new Date(event.endsAt);
-  const dateLabel = isSameDay(start, end)
-    ? `${format(start, "d MMMM yyyy", { locale: pl })}, ${format(start, "HH:mm")}–${format(end, "HH:mm")}`
-    : `${format(start, "d MMM yyyy HH:mm", { locale: pl })} – ${format(end, "d MMM yyyy HH:mm", { locale: pl })}`;
-
-  const [message, setMessage] = useState(
-    `Cześć !\nSzukamy dodatkowego technika na Event ${event.title} (${dateLabel})\nJeśli masz wolny termin odezwij się do Gabrysi 504064410`
-  );
-
   useEffect(() => {
     fetchJsonOrNull<Person[]>("/api/people").then((data) => {
-      if (data) setPeople(data);
+      if (data) {
+        setPeople(data);
+        if (preselectAll) {
+          setSelectedIds(new Set(data.filter(candidateFilter).map((p) => p.id)));
+        }
+      }
       setLoading(false);
     });
+    // Only run once on mount - candidateFilter/preselectAll are stable per modal instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const externalPeople = useMemo(
-    () =>
-      people.filter((p) =>
-        p.skills.some((s) => s.skill.name.toLowerCase() === EXTERNAL_SKILL)
-      ),
-    [people]
+  const candidates = useMemo(
+    () => people.filter(candidateFilter),
+    [people, candidateFilter]
   );
 
   const skillQuery = skillFilter.trim().toLowerCase();
   const filteredPeople = useMemo(
     () =>
       skillQuery
-        ? externalPeople.filter(
+        ? candidates.filter(
             (p) =>
               p.name.toLowerCase().includes(skillQuery) ||
               p.skills.some((s) => s.skill.name.toLowerCase().includes(skillQuery))
           )
-        : externalPeople,
-    [externalPeople, skillQuery]
+        : candidates,
+    [candidates, skillQuery]
   );
 
   const allFilteredSelected =
@@ -113,12 +114,8 @@ export function RecruitCrewModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
       <div className="flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden rounded-lg border border-border-subtle bg-surface shadow-xl">
         <div className="border-b border-border-subtle p-5 pb-3">
-          <h2 className="text-base font-semibold text-foreground">
-            Szukaj ekipy — {event.title}
-          </h2>
-          <p className="mt-1 text-xs text-muted">
-            Wysyłka SMS do zewnętrznych osób (tag „zewnętrzny” w umiejętnościach)
-          </p>
+          <h2 className="text-base font-semibold text-foreground">{heading}</h2>
+          <p className="mt-1 text-xs text-muted">{subtitle}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-5 pt-3">
@@ -131,14 +128,11 @@ export function RecruitCrewModal({
 
           {loading && <p className="text-sm text-muted">Ładowanie…</p>}
 
-          {!loading && externalPeople.length === 0 && (
-            <p className="text-sm text-muted/60">
-              Brak osób oznaczonych tagiem „zewnętrzny” w umiejętnościach. Dodaj go
-              osobom w zakładce „Ludzie”.
-            </p>
+          {!loading && candidates.length === 0 && (
+            <p className="text-sm text-muted/60">{emptyMessage}</p>
           )}
 
-          {!loading && externalPeople.length > 0 && (
+          {!loading && candidates.length > 0 && (
             <>
               <label className="mb-1.5 flex items-center gap-2 border-b border-border-subtle pb-2 text-sm text-foreground">
                 <input
