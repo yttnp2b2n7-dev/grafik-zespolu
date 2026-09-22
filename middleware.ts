@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   // Triggered by Vercel Cron, which carries no session cookie; the route
   // itself checks the CRON_SECRET bearer token instead.
   "/api/cron/monthly-reports",
+  "/api/cron/daily-backup",
 ];
 
 export async function middleware(req: NextRequest) {
