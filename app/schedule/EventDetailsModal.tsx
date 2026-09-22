@@ -21,6 +21,33 @@ export function EventDetailsModal({
   hideSkills?: boolean;
 }) {
   const [showRecruit, setShowRecruit] = useState(false);
+  const [sendingSms, setSendingSms] = useState(false);
+  const [smsResult, setSmsResult] = useState<string | null>(null);
+
+  async function handleSendSms() {
+    setSendingSms(true);
+    setSmsResult(null);
+    try {
+      const res = await fetch(`/api/events/${event.id}/send-sms`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const skippedText =
+          data.skipped.length > 0
+            ? ` (bez numeru: ${data.skipped.join(", ")})`
+            : "";
+        setSmsResult(`Wysłano SMS do ${data.sent} osób${skippedText}.`);
+      } else {
+        setSmsResult(`Błąd: ${data.error}`);
+      }
+    } catch {
+      setSmsResult("Błąd wysyłki SMS");
+    } finally {
+      setSendingSms(false);
+    }
+  }
+
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
   const timeLabel = isSameDay(start, end)
@@ -116,7 +143,20 @@ export function EventDetailsModal({
           )}
         </div>
 
-        <div className="mt-4 flex justify-end gap-2">
+        {!hideSkills && smsResult && (
+          <p className="mt-2 text-xs text-muted/80">{smsResult}</p>
+        )}
+
+        <div className="mt-4 flex flex-wrap justify-end gap-2">
+          {!hideSkills && event.assignments.length > 0 && (
+            <button
+              onClick={handleSendSms}
+              disabled={sendingSms}
+              className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground disabled:opacity-50"
+            >
+              {sendingSms ? "Wysyłanie…" : "Powiadom ekipę"}
+            </button>
+          )}
           {!hideSkills && (
             <button
               onClick={() => setShowRecruit(true)}
