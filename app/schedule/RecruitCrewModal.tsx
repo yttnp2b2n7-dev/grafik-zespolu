@@ -31,7 +31,7 @@ export function RecruitCrewModal({
     : `${format(start, "d MMM yyyy HH:mm", { locale: pl })} – ${format(end, "d MMM yyyy HH:mm", { locale: pl })}`;
 
   const [message, setMessage] = useState(
-    `Szukamy ekipy na "${event.title}", ${dateLabel}. Odezwij się jeśli jesteś dostępny/a. Grafik ImpactVision`
+    `Cześć !\nSzukamy dodatkowego technika na Event ${event.title} (${dateLabel})\nJeśli masz wolny termin odezwij się do Gabrysi 504064410`
   );
 
   useEffect(() => {
