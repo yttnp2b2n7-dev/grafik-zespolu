@@ -334,6 +334,43 @@ export default function SchedulePage() {
     });
   }
 
+  async function toggleAssignmentRole(
+    assignmentId: string,
+    type: EventType,
+    checked: boolean
+  ) {
+    const eventId = events.find((ev) =>
+      ev.assignments.some((a) => a.id === assignmentId)
+    )?.id;
+    const assignment = events
+      .flatMap((ev) => ev.assignments)
+      .find((a) => a.id === assignmentId);
+    if (!eventId || !assignment) return;
+
+    const nextRoles = checked
+      ? [...assignment.roles, type]
+      : assignment.roles.filter((r) => r !== type);
+
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.id !== eventId
+          ? ev
+          : {
+              ...ev,
+              assignments: ev.assignments.map((a) =>
+                a.id === assignmentId ? { ...a, roles: nextRoles } : a
+              ),
+            }
+      )
+    );
+
+    await fetch(`/api/assignments/${assignmentId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ roles: nextRoles }),
+    });
+  }
+
   async function removeAssignment(assignmentId: string) {
     let removed: { eventId: string; personId: string; personName: string; isLead: boolean } | null =
       null;
@@ -570,6 +607,7 @@ export default function SchedulePage() {
                   event={event}
                   onRemoveAssignment={removeAssignment}
                   onToggleLead={toggleLead}
+                  onToggleRole={toggleAssignmentRole}
                   onDelete={() => deleteEvent(event.id)}
                   onEdit={() => setEditingEvent(event)}
                   readOnly={!isAdmin}
@@ -804,6 +842,7 @@ export default function SchedulePage() {
                         event={event}
                         onRemoveAssignment={removeAssignment}
                         onToggleLead={toggleLead}
+                        onToggleRole={toggleAssignmentRole}
                         onDelete={() => deleteEvent(event.id)}
                         onEdit={() => setEditingEvent(event)}
                         onCopyFromPreviousDay={
@@ -839,6 +878,7 @@ export default function SchedulePage() {
                       event={ev}
                       onRemoveAssignment={removeAssignment}
                       onToggleLead={toggleLead}
+                      onToggleRole={toggleAssignmentRole}
                       onDelete={() => deleteEvent(ev.id)}
                       onEdit={() => setEditingEvent(ev)}
                       readOnly={!isAdmin}
@@ -878,6 +918,7 @@ export default function SchedulePage() {
                       event={ev}
                       onRemoveAssignment={removeAssignment}
                       onToggleLead={toggleLead}
+                      onToggleRole={toggleAssignmentRole}
                       onDelete={() => deleteEvent(ev.id)}
                       onEdit={() => setEditingEvent(ev)}
                       onCopyFromPreviousDay={

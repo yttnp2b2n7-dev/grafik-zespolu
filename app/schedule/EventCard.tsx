@@ -14,12 +14,14 @@ import {
   EVENT_TYPE_LABELS,
   EVENT_TYPE_LETTERS,
   getEventTypeAccentColor,
+  type EventType,
 } from "@/lib/eventType";
 
 export function EventCard({
   event,
   onRemoveAssignment,
   onToggleLead,
+  onToggleRole,
   onDelete,
   onEdit,
   onCopyFromPreviousDay,
@@ -28,6 +30,7 @@ export function EventCard({
   event: Event;
   onRemoveAssignment: (assignmentId: string) => void;
   onToggleLead?: (assignmentId: string, isLead: boolean) => void;
+  onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
   onDelete: () => void;
   onEdit: () => void;
   onCopyFromPreviousDay?: () => void;
@@ -186,6 +189,7 @@ export function EventCard({
         <EventDetailsModal
           event={event}
           onClose={() => setShowDetails(false)}
+          onToggleRole={onToggleRole}
           hideSkills={readOnly}
         />
       )}

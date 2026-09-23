@@ -8,6 +8,8 @@ import {
   EVENT_TYPE_COLORS,
   EVENT_TYPE_LABELS,
   EVENT_TYPE_LETTERS,
+  EVENT_TYPE_OPTIONS,
+  type EventType,
 } from "@/lib/eventType";
 import { CrewSmsModal } from "./CrewSmsModal";
 import { getPersonColor } from "@/lib/personGroup";
@@ -17,10 +19,12 @@ const EXTERNAL_SKILL = "zewnętrzny";
 export function EventDetailsModal({
   event,
   onClose,
+  onToggleRole,
   hideSkills,
 }: {
   event: Event;
   onClose: () => void;
+  onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
   hideSkills?: boolean;
 }) {
   const [activeSmsModal, setActiveSmsModal] = useState<"notify" | "recruit" | null>(
@@ -103,28 +107,76 @@ export function EventDetailsModal({
             <p className="text-sm text-muted/60">Brak przypisanych osób.</p>
           ) : (
             <ul className="flex flex-col gap-1.5">
-              {event.assignments.map((a) => (
-                <li
-                  key={a.id}
-                  className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm"
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: getPersonColor(a.person) }}
-                  />
-                  {a.isLead && (
-                    <span className="text-yellow-400" title="Dowódca wydarzenia">
-                      ★
-                    </span>
-                  )}
-                  <span className="text-foreground">{a.person.name}</span>
-                  {!hideSkills && a.person.skills.length > 0 && (
-                    <span className="text-xs text-muted">
-                      ({a.person.skills.map((s) => s.skill.name).join(", ")})
-                    </span>
-                  )}
-                </li>
-              ))}
+              {event.assignments.map((a) => {
+                const availableTypes = EVENT_TYPE_OPTIONS.filter((type) =>
+                  event.eventTypes.includes(type)
+                );
+                const editable = !hideSkills && !!onToggleRole;
+                return (
+                  <li
+                    key={a.id}
+                    className="flex flex-col gap-1.5 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ backgroundColor: getPersonColor(a.person) }}
+                      />
+                      {a.isLead && (
+                        <span className="text-yellow-400" title="Dowódca wydarzenia">
+                          ★
+                        </span>
+                      )}
+                      <span className="text-foreground">{a.person.name}</span>
+                      {!hideSkills && a.person.skills.length > 0 && (
+                        <span className="text-xs text-muted">
+                          ({a.person.skills.map((s) => s.skill.name).join(", ")})
+                        </span>
+                      )}
+                    </div>
+                    {availableTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {availableTypes.map((type) => {
+                          const active = a.roles.includes(type);
+                          if (!editable) {
+                            return active ? (
+                              <span
+                                key={type}
+                                className="flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold leading-none text-white"
+                                style={{ backgroundColor: EVENT_TYPE_COLORS[type] }}
+                                title={EVENT_TYPE_LABELS[type]}
+                              >
+                                {EVENT_TYPE_LETTERS[type]}
+                              </span>
+                            ) : null;
+                          }
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => onToggleRole(a.id, type, !active)}
+                              title={EVENT_TYPE_LABELS[type]}
+                              aria-pressed={active}
+                              className={`flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold leading-none transition ${
+                                active
+                                  ? "text-white"
+                                  : "border border-border-subtle text-muted/50 hover:border-accent hover:text-foreground"
+                              }`}
+                              style={
+                                active
+                                  ? { backgroundColor: EVENT_TYPE_COLORS[type] }
+                                  : undefined
+                              }
+                            >
+                              {EVENT_TYPE_LETTERS[type]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

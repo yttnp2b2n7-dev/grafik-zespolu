@@ -26,6 +26,7 @@ export type Assignment = {
   eventId: string;
   personId: string;
   isLead: boolean;
+  roles: EventType[];
   person: Person;
 };
 

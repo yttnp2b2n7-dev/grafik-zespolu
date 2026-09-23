@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { parseEventTypesInput, type EventType } from "@/lib/eventType";
 
 export async function PATCH(
   req: NextRequest,
@@ -7,22 +8,34 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const body = await req.json();
-  const isLead = body.isLead === true;
 
-  const assignment = await prisma.assignment.findUnique({ where: { id } });
+  const assignment = await prisma.assignment.findUnique({
+    where: { id },
+    include: { event: true },
+  });
   if (!assignment) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const data: { isLead?: boolean; roles?: EventType[] } = {};
+  if ("isLead" in body) {
+    data.isLead = body.isLead === true;
+  }
+  if ("roles" in body) {
+    // A person can only be tagged with roles the event itself carries.
+    const allowed = new Set(assignment.event.eventTypes);
+    data.roles = parseEventTypesInput(body.roles).filter((r) => allowed.has(r));
   }
 
   const [updated] = await prisma.$transaction([
     prisma.assignment.update({
       where: { id },
-      data: { isLead },
+      data,
       include: { person: true },
     }),
     // Only one commander per event: clearing the flag on every other
     // assignment for the same event when marking a new one.
-    ...(isLead
+    ...(data.isLead === true
       ? [
           prisma.assignment.updateMany({
             where: { eventId: assignment.eventId, NOT: { id } },
