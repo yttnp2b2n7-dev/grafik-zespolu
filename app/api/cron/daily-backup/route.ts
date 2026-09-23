@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { put, list, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 
-const RETENTION_COUNT = 60;
+// One week of history at 4 backups/day (triggered externally by a GitHub
+// Actions schedule - Vercel's Hobby plan only allows once-daily crons).
+const RETENTION_COUNT = 28;
 
 export async function GET(req: NextRequest) {
   const authHeader = req.headers.get("authorization");

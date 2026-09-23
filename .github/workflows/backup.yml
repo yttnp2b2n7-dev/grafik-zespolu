@@ -1,0 +1,20 @@
+name: Database backup
+
+# Vercel's Hobby plan only allows a cron job to run once per day, so this
+# runs the 4x/day schedule instead by hitting the same endpoint externally.
+# Times are in UTC and target 06:00 / 12:00 / 18:00 / 00:00 Polish winter
+# time (CET, UTC+1) - during summer (CEST, UTC+2) this drifts an hour later,
+# which doesn't matter for a backup job.
+on:
+  schedule:
+    - cron: "0 5,11,17,23 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backup endpoint
+        run: |
+          curl -sf -X GET "https://grafik-zespolu-ql7f.vercel.app/api/cron/daily-backup" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
