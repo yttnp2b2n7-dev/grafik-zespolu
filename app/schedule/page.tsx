@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -16,6 +16,7 @@ import {
   differenceInCalendarDays,
   format,
   isSameDay,
+  startOfDay,
   startOfWeek,
   subWeeks,
 } from "date-fns";
@@ -111,13 +112,23 @@ function sortByPersonName(assignments: Assignment[]): Assignment[] {
   );
 }
 
+// `<input type="date">` values parse to UTC midnight via `new Date(string)`,
+// which can land on the wrong day once shifted to local time - this keeps it
+// anchored to local midnight instead.
+function parseLocalDate(value: string): Date {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
 export default function SchedulePage() {
   const { role } = useSession();
   const pushUndo = useUndo();
   const isAdmin = role === "admin";
+  const [viewMode, setViewMode] = useState<"week" | "day">("week");
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
+  const [dayViewDate, setDayViewDate] = useState(() => startOfDay(new Date()));
   const [people, setPeople] = useState<Person[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,9 +142,19 @@ export default function SchedulePage() {
   const [upcomingLoading, setUpcomingLoading] = useState(false);
   const [historicalEvents, setHistoricalEvents] = useState<Event[]>([]);
   const [historicalLoading, setHistoricalLoading] = useState(false);
-  const [freeDayFilter, setFreeDayFilter] = useState<number | null>(null);
+  const [freeDayFilter, setFreeDayFilter] = useState<Date | null>(null);
   const isDraggingRef = useRef(false);
   const isSearching = eventSearch.trim().length > 0 || historicalOnly;
+
+  // Day view fetches one extra day before the selected one (but only
+  // displays the selected day) so "Kopiuj ekipę z poprzedniego dnia" still
+  // has the previous day's data available to copy from.
+  const { rangeStart, rangeEnd } = useMemo(() => {
+    if (viewMode === "day") {
+      return { rangeStart: addDays(dayViewDate, -1), rangeEnd: addDays(dayViewDate, 1) };
+    }
+    return { rangeStart: weekStart, rangeEnd: addDays(weekStart, 7) };
+  }, [viewMode, weekStart, dayViewDate]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -145,12 +166,11 @@ export default function SchedulePage() {
   }, []);
 
   const loadEvents = useCallback(async () => {
-    const weekEnd = addDays(weekStart, 7);
     const data = await fetchJsonOrNull<Event[]>(
-      `/api/events?weekStart=${weekStart.toISOString()}&weekEnd=${weekEnd.toISOString()}`
+      `/api/events?weekStart=${rangeStart.toISOString()}&weekEnd=${rangeEnd.toISOString()}`
     );
     if (data) setEvents(data);
-  }, [weekStart]);
+  }, [rangeStart, rangeEnd]);
 
   const loadUpcomingEvents = useCallback(async () => {
     const data = await fetchJsonOrNull<Event[]>(
@@ -177,7 +197,7 @@ export default function SchedulePage() {
 
   useEffect(() => {
     setFreeDayFilter(null);
-  }, [weekStart]);
+  }, [viewMode, weekStart, dayViewDate]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -454,14 +474,13 @@ export default function SchedulePage() {
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
-  const freeDayAssignedIds =
-    freeDayFilter !== null
-      ? new Set(
-          events
-            .filter((ev) => isSameDay(new Date(ev.startsAt), days[freeDayFilter]))
-            .flatMap((ev) => ev.assignments.map((a) => a.personId))
-        )
-      : null;
+  const freeDayAssignedIds = freeDayFilter
+    ? new Set(
+        events
+          .filter((ev) => isSameDay(new Date(ev.startsAt), freeDayFilter))
+          .flatMap((ev) => ev.assignments.map((a) => a.personId))
+      )
+    : null;
 
   const personSearchQuery = personSearch.trim().toLowerCase();
   const filteredPeople = people.filter(
@@ -488,6 +507,11 @@ export default function SchedulePage() {
 
   const singleDayEvents = events.filter((ev) => !ev.groupId);
   const groupRows = packEventGroups(events, weekStart);
+  const dayViewEvents = events
+    .filter((ev) => isSameDay(new Date(ev.startsAt), dayViewDate))
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()
+    );
 
   return (
     <DndContext
@@ -557,36 +581,114 @@ export default function SchedulePage() {
           <>
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setWeekStart((d) => subWeeks(d, 1))}
-              className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
-              aria-label="Poprzedni tydzień"
-            >
-              ←
-            </button>
-            <div className="text-sm text-foreground">
-              {format(weekStart, "d MMM", { locale: pl })} –{" "}
-              {format(addDays(weekStart, 6), "d MMM yyyy", { locale: pl })}
+            <div className="flex rounded-md border border-border-subtle p-0.5">
+              <button
+                onClick={() => setViewMode("week")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  viewMode === "week"
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Tydzień
+              </button>
+              <button
+                onClick={() => setViewMode("day")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  viewMode === "day"
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Dzień
+              </button>
             </div>
-            <button
-              onClick={() => setWeekStart((d) => addWeeks(d, 1))}
-              className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
-              aria-label="Następny tydzień"
-            >
-              →
-            </button>
-            <button
-              onClick={() =>
-                setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
-              }
-              className="rounded-md px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
-            >
-              Dziś
-            </button>
+
+            {viewMode === "week" ? (
+              <>
+                <button
+                  onClick={() => setWeekStart((d) => subWeeks(d, 1))}
+                  className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+                  aria-label="Poprzedni tydzień"
+                >
+                  ←
+                </button>
+                <div className="text-sm text-foreground">
+                  {format(weekStart, "d MMM", { locale: pl })} –{" "}
+                  {format(addDays(weekStart, 6), "d MMM yyyy", { locale: pl })}
+                </div>
+                <button
+                  onClick={() => setWeekStart((d) => addWeeks(d, 1))}
+                  className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+                  aria-label="Następny tydzień"
+                >
+                  →
+                </button>
+                <button
+                  onClick={() =>
+                    setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 }))
+                  }
+                  className="rounded-md px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
+                >
+                  Dziś
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setDayViewDate((d) => addDays(d, -1))}
+                  className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+                  aria-label="Poprzedni dzień"
+                >
+                  ←
+                </button>
+                <input
+                  type="date"
+                  value={format(dayViewDate, "yyyy-MM-dd")}
+                  onChange={(e) => {
+                    if (e.target.value) setDayViewDate(parseLocalDate(e.target.value));
+                  }}
+                  className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+                />
+                <button
+                  onClick={() => setDayViewDate((d) => addDays(d, 1))}
+                  className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+                  aria-label="Następny dzień"
+                >
+                  →
+                </button>
+                <button
+                  onClick={() => setDayViewDate(startOfDay(new Date()))}
+                  className="rounded-md px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
+                >
+                  Dziś
+                </button>
+                {isAdmin && (
+                  <button
+                    onClick={() =>
+                      setFreeDayFilter((prev) =>
+                        prev && isSameDay(prev, dayViewDate) ? null : dayViewDate
+                      )
+                    }
+                    className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
+                      freeDayFilter && isSameDay(freeDayFilter, dayViewDate)
+                        ? "bg-accent text-white"
+                        : "border border-border-subtle text-muted hover:border-accent hover:text-foreground"
+                    }`}
+                  >
+                    Wolni
+                  </button>
+                )}
+              </>
+            )}
           </div>
           {isAdmin && (
             <button
-              onClick={() => setModalDate(format(weekStart, "yyyy-MM-dd"))}
+              onClick={() =>
+                setModalDate(
+                  format(viewMode === "day" ? dayViewDate : weekStart, "yyyy-MM-dd")
+                )
+              }
               className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
             >
               + Dodaj wydarzenie
@@ -604,9 +706,8 @@ export default function SchedulePage() {
               </p>
               {freeDayFilter !== null && (
                 <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-accent/10 px-2 py-1 text-[11px] text-accent">
-                  <span>
-                    Wolni: {DAY_LABELS[freeDayFilter]}{" "}
-                    {format(days[freeDayFilter], "d MMM", { locale: pl })}
+                  <span className="capitalize">
+                    Wolni: {format(freeDayFilter, "EEEE d MMM", { locale: pl })}
                   </span>
                   <button
                     onClick={() => setFreeDayFilter(null)}
@@ -657,6 +758,7 @@ export default function SchedulePage() {
                 </div>
               ))}
             </div>
+            {viewMode === "week" ? (
             <div className="overflow-x-auto">
             <div className="grid min-w-[1050px] grid-cols-7 gap-3">
               {days.map((day, i) => (
@@ -674,10 +776,12 @@ export default function SchedulePage() {
                   {isAdmin && (
                     <button
                       onClick={() =>
-                        setFreeDayFilter((prev) => (prev === i ? null : i))
+                        setFreeDayFilter((prev) =>
+                          prev && isSameDay(prev, day) ? null : day
+                        )
                       }
                       className={`mt-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition ${
-                        freeDayFilter === i
+                        freeDayFilter && isSameDay(freeDayFilter, day)
                           ? "bg-accent text-white"
                           : "border border-border-subtle text-muted hover:border-accent hover:text-foreground"
                       }`}
@@ -765,6 +869,44 @@ export default function SchedulePage() {
               })}
             </div>
             </div>
+            ) : (
+            <div className="overflow-x-auto">
+              <div className="flex min-h-[160px] items-start gap-3 pb-2">
+                {dayViewEvents.map((ev) => (
+                  <div key={ev.id} className="w-[280px] shrink-0">
+                    <EventCard
+                      event={ev}
+                      onRemoveAssignment={removeAssignment}
+                      onToggleLead={toggleLead}
+                      onDelete={() => deleteEvent(ev.id)}
+                      onEdit={() => setEditingEvent(ev)}
+                      onCopyFromPreviousDay={
+                        findPreviousDayEvent(ev, events)
+                          ? () => copyCrewFromPreviousDay(ev.id)
+                          : undefined
+                      }
+                      readOnly={!isAdmin}
+                    />
+                  </div>
+                ))}
+                {isAdmin && (
+                  <div className="w-[280px] shrink-0">
+                    <button
+                      onClick={() =>
+                        setModalDate(format(dayViewDate, "yyyy-MM-dd"))
+                      }
+                      className="flex h-full min-h-[120px] w-full items-center justify-center rounded-md border border-dashed border-border-subtle py-2 text-xs text-muted/60 transition hover:border-accent/60 hover:text-muted"
+                    >
+                      + wydarzenie
+                    </button>
+                  </div>
+                )}
+                {dayViewEvents.length === 0 && !isAdmin && (
+                  <p className="text-xs text-muted">Brak wydarzeń tego dnia.</p>
+                )}
+              </div>
+            </div>
+            )}
           </div>
         </div>
         {loading && <p className="mt-4 text-xs text-muted">Ładowanie…</p>}
