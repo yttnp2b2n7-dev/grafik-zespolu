@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     include: {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
+        orderBy: { person: { name: "asc" } },
       },
     },
     // Historical searches ("to") read best most-recent-first; everything

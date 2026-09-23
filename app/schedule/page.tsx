@@ -102,6 +102,15 @@ function findPreviousDayEvent(event: Event, events: Event[]): Event | null {
   return siblings[idx - 1];
 }
 
+// Keeps the assigned-people list within an event alphabetical, both for the
+// API's own ordering and for the optimistic local updates that happen before
+// the next poll would otherwise re-sort it.
+function sortByPersonName(assignments: Assignment[]): Assignment[] {
+  return [...assignments].sort((a, b) =>
+    a.person.name.localeCompare(b.person.name, "pl")
+  );
+}
+
 export default function SchedulePage() {
   const { role } = useSession();
   const pushUndo = useUndo();
@@ -241,12 +250,10 @@ export default function SchedulePage() {
           };
         }
         if (ev.id === eventId) {
-          return {
-            ...ev,
-            assignments: ev.assignments.some((a) => a.id === assignment.id)
-              ? ev.assignments
-              : [...ev.assignments, assignment],
-          };
+          const withNew = ev.assignments.some((a) => a.id === assignment.id)
+            ? ev.assignments
+            : [...ev.assignments, assignment];
+          return { ...ev, assignments: sortByPersonName(withNew) };
         }
         return ev;
       })
@@ -275,7 +282,9 @@ export default function SchedulePage() {
     );
 
     setEvents((prev) =>
-      prev.map((ev) => (ev.id === eventId ? { ...ev, assignments: created } : ev))
+      prev.map((ev) =>
+        ev.id === eventId ? { ...ev, assignments: sortByPersonName(created) } : ev
+      )
     );
   }
 

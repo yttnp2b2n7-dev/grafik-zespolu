@@ -15,6 +15,7 @@ export async function GET(
     include: {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
+        orderBy: { person: { name: "asc" } },
       },
     },
   });
