@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Event } from "@/lib/types";
 import { formatEventReportText, getEventDateTimeLabel } from "@/lib/eventReportText";
+import { getPersonColor } from "@/lib/personGroup";
 
 export function EventReport({ event }: { event: Event }) {
   const [copied, setCopied] = useState(false);
@@ -57,7 +58,7 @@ export function EventReport({ event }: { event: Event }) {
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: a.person.color }}
+                  style={{ backgroundColor: getPersonColor(a.person) }}
                 />
                 {a.isLead && (
                   <span className="text-yellow-400" title="Dowódca wydarzenia">

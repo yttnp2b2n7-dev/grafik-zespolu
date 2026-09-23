@@ -2,6 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import type { Person } from "@/lib/types";
+import { getPersonColor } from "@/lib/personGroup";
 
 export function PersonTile({
   person,
@@ -32,7 +33,7 @@ export function PersonTile({
     >
       <span
         className="h-2 w-2 shrink-0 rounded-full"
-        style={{ backgroundColor: person.color }}
+        style={{ backgroundColor: getPersonColor(person) }}
       />
       <span className="truncate">{person.name}</span>
     </div>

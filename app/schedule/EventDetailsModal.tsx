@@ -10,6 +10,7 @@ import {
   EVENT_TYPE_LETTERS,
 } from "@/lib/eventType";
 import { CrewSmsModal } from "./CrewSmsModal";
+import { getPersonColor } from "@/lib/personGroup";
 
 const EXTERNAL_SKILL = "zewnętrzny";
 
@@ -109,7 +110,7 @@ export function EventDetailsModal({
                 >
                   <span
                     className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: a.person.color }}
+                    style={{ backgroundColor: getPersonColor(a.person) }}
                   />
                   {a.isLead && (
                     <span className="text-yellow-400" title="Dowódca wydarzenia">

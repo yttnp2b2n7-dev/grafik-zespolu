@@ -2,6 +2,7 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import type { Assignment } from "@/lib/types";
+import { getPersonColor } from "@/lib/personGroup";
 
 export function AssignmentChip({
   assignment,
@@ -27,6 +28,8 @@ export function AssignmentChip({
     disabled: readOnly,
   });
 
+  const color = getPersonColor(assignment.person);
+
   return (
     <span
       ref={setNodeRef}
@@ -34,11 +37,11 @@ export function AssignmentChip({
       className={`flex items-center gap-1 rounded-full border border-border-subtle px-2 py-0.5 text-xs text-foreground transition ${
         readOnly ? "" : "cursor-grab active:cursor-grabbing"
       } ${isDragging ? "opacity-40" : ""}`}
-      style={{ backgroundColor: `${assignment.person.color}22` }}
+      style={{ backgroundColor: `${color}22` }}
     >
       <span
         className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: assignment.person.color }}
+        style={{ backgroundColor: color }}
       />
       {!readOnly && onToggleLead ? (
         <button

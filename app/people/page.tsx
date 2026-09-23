@@ -3,17 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Person, Skill } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
-
-const PALETTE = [
-  "#6366f1",
-  "#ec4899",
-  "#22c55e",
-  "#eab308",
-  "#06b6d4",
-  "#f97316",
-  "#a855f7",
-  "#ef4444",
-];
+import { getPersonColor } from "@/lib/personGroup";
 
 export default function PeoplePage() {
   const [people, setPeople] = useState<Person[]>([]);
@@ -22,7 +12,6 @@ export default function PeoplePage() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [newColor, setNewColor] = useState(PALETTE[0]);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -63,7 +52,6 @@ export default function PeoplePage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
-        color: newColor,
         email: newEmail.trim() || null,
         phone: newPhone.trim() || null,
       }),
@@ -75,7 +63,6 @@ export default function PeoplePage() {
     setNewName("");
     setNewEmail("");
     setNewPhone("");
-    setNewColor(PALETTE[Math.floor(Math.random() * PALETTE.length)]);
     await loadAll();
   }
 
@@ -130,21 +117,6 @@ export default function PeoplePage() {
         onSubmit={addPerson}
         className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface p-4"
       >
-        <div className="flex gap-1.5">
-          {PALETTE.map((color) => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => setNewColor(color)}
-              className="h-6 w-6 rounded-full ring-offset-2 ring-offset-surface transition"
-              style={{
-                backgroundColor: color,
-                boxShadow: newColor === color ? `0 0 0 2px ${color}` : "none",
-              }}
-              aria-label={`Wybierz kolor ${color}`}
-            />
-          ))}
-        </div>
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -272,7 +244,7 @@ function PersonCard({
           <div className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: person.color }}
+              style={{ backgroundColor: getPersonColor(person) }}
             />
             <input
               value={nameInput}
@@ -318,7 +290,7 @@ function PersonCard({
             <div className="flex items-center gap-2.5">
               <span
                 className="h-2.5 w-2.5 shrink-0 rounded-full"
-                style={{ backgroundColor: person.color }}
+                style={{ backgroundColor: getPersonColor(person) }}
               />
               <span className="text-sm font-medium text-foreground">
                 {person.name}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Person } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
+import { getPersonColor } from "@/lib/personGroup";
 
 export function CrewSmsModal({
   heading,
@@ -158,7 +159,7 @@ export function CrewSmsModal({
                     />
                     <span
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: p.color }}
+                      style={{ backgroundColor: getPersonColor(p) }}
                     />
                     <span className="min-w-0 flex-1 truncate">{p.name}</span>
                     {!p.phone && (
