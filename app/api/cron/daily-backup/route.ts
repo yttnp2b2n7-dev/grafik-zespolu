@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { put, list, del } from "@vercel/blob";
 import { prisma } from "@/lib/prisma";
 
+// Vercel's default Hobby function timeout (~10s) was too short once the
+// dataset grew - this route does several sequential DB + Blob round trips.
+export const maxDuration = 60;
+
 // One week of history at 4 backups/day (triggered externally by a GitHub
 // Actions schedule - Vercel's Hobby plan only allows once-daily crons).
 const RETENTION_COUNT = 28;
