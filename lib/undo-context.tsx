@@ -66,7 +66,7 @@ export function UndoProvider({ children }: { children: React.ReactNode }) {
     <UndoContext.Provider value={pushUndo}>
       {children}
       {action && (
-        <div className="fixed bottom-5 right-5 z-[100] flex items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 shadow-xl">
+        <div className="fixed right-5 top-20 z-[100] flex items-center gap-3 rounded-lg border border-border-subtle bg-surface px-4 py-3 shadow-xl">
           <span className="text-sm text-foreground">{action.label}</span>
           <button
             onClick={handleUndo}
