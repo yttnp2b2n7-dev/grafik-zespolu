@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import type { Person, Skill } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import { getPersonColor } from "@/lib/personGroup";
+import { useUndo } from "@/lib/undo-context";
 
 export default function PeoplePage() {
+  const pushUndo = useUndo();
   const [people, setPeople] = useState<Person[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,8 +69,35 @@ export default function PeoplePage() {
   }
 
   async function removePerson(id: string) {
+    const removed = people.find((p) => p.id === id);
     await fetch(`/api/people/${id}`, { method: "DELETE" });
     setPeople((prev) => prev.filter((p) => p.id !== id));
+
+    if (removed) {
+      pushUndo({
+        label: `Usunięto ${removed.name}`,
+        restore: async () => {
+          const res = await fetch("/api/people", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: removed.name,
+              email: removed.email,
+              phone: removed.phone,
+            }),
+          });
+          const newPerson: Person = await res.json();
+          for (const s of removed.skills) {
+            await fetch(`/api/people/${newPerson.id}/skills`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: s.skill.name }),
+            });
+          }
+          await loadAll();
+        },
+      });
+    }
   }
 
   async function updatePersonDetails(
@@ -99,10 +128,27 @@ export default function PeoplePage() {
   }
 
   async function removeSkill(personId: string, skillId: string) {
+    const person = people.find((p) => p.id === personId);
+    const skillName = person?.skills.find((s) => s.skillId === skillId)?.skill.name;
+
     await fetch(`/api/people/${personId}/skills?skillId=${skillId}`, {
       method: "DELETE",
     });
     await loadAll();
+
+    if (skillName) {
+      pushUndo({
+        label: `Usunięto umiejętność „${skillName}”`,
+        restore: async () => {
+          await fetch(`/api/people/${personId}/skills`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: skillName }),
+          });
+          await loadAll();
+        },
+      });
+    }
   }
 
   return (

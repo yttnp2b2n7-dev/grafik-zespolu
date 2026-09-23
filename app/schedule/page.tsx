@@ -25,6 +25,7 @@ import { PersonTile } from "./PersonTile";
 import { EventCard } from "./EventCard";
 import { EventModal } from "./EventModal";
 import { useSession } from "../session-context";
+import { useUndo } from "@/lib/undo-context";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import {
   EVENT_TYPE_COLORS,
@@ -103,6 +104,7 @@ function findPreviousDayEvent(event: Event, events: Event[]): Event | null {
 
 export default function SchedulePage() {
   const { role } = useSession();
+  const pushUndo = useUndo();
   const isAdmin = role === "admin";
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
@@ -304,6 +306,16 @@ export default function SchedulePage() {
   }
 
   async function removeAssignment(assignmentId: string) {
+    let removed: { eventId: string; personId: string; personName: string; isLead: boolean } | null =
+      null;
+    for (const ev of events) {
+      const a = ev.assignments.find((a) => a.id === assignmentId);
+      if (a) {
+        removed = { eventId: ev.id, personId: a.personId, personName: a.person.name, isLead: a.isLead };
+        break;
+      }
+    }
+
     setEvents((prev) =>
       prev.map((ev) => ({
         ...ev,
@@ -311,11 +323,78 @@ export default function SchedulePage() {
       }))
     );
     await fetch(`/api/assignments/${assignmentId}`, { method: "DELETE" });
+
+    if (removed) {
+      pushUndo({
+        label: `Usunięto ${removed.personName} z wydarzenia`,
+        restore: async () => {
+          const res = await fetch("/api/assignments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: removed.eventId, personId: removed.personId }),
+          });
+          const assignment: Assignment = await res.json();
+          if (removed.isLead) {
+            await fetch(`/api/assignments/${assignment.id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ isLead: true }),
+            });
+          }
+          await loadEvents();
+        },
+      });
+    }
   }
 
   async function deleteEvent(eventId: string) {
+    // Fetched fresh right before deleting (rather than trusting local
+    // `events` state) so the undo snapshot can't be stale if this event was
+    // just touched by another action whose own refresh hadn't landed yet.
+    const removed = await fetchJsonOrNull<Event>(`/api/events/${eventId}`);
     setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
     await fetch(`/api/events/${eventId}`, { method: "DELETE" });
+
+    if (removed) {
+      pushUndo({
+        label: `Usunięto wydarzenie „${removed.title}”`,
+        restore: async () => {
+          const res = await fetch("/api/events", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title: removed.title,
+              startsAt: removed.startsAt,
+              endsAt: removed.endsAt,
+              color: removed.color,
+              eventTypes: removed.eventTypes,
+              notes: removed.notes,
+              loadingEnabled: removed.loadingEnabled,
+              loadingTime: removed.loadingTime,
+              transportEnabled: removed.transportEnabled,
+              transportVehicle: removed.transportVehicle,
+            }),
+          });
+          const newEvent: Event = await res.json();
+          for (const a of removed.assignments) {
+            const ares = await fetch("/api/assignments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ eventId: newEvent.id, personId: a.personId }),
+            });
+            const newAssignment: Assignment = await ares.json();
+            if (a.isLead) {
+              await fetch(`/api/assignments/${newAssignment.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isLead: true }),
+              });
+            }
+          }
+          await loadEvents();
+        },
+      });
+    }
   }
 
   async function createEvent(data: {
