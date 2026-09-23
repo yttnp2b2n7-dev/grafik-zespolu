@@ -3,6 +3,12 @@
 import { useDraggable } from "@dnd-kit/core";
 import type { Assignment } from "@/lib/types";
 import { getPersonColor } from "@/lib/personGroup";
+import {
+  EVENT_TYPE_COLORS,
+  EVENT_TYPE_LETTERS,
+  EVENT_TYPE_LABELS,
+  EVENT_TYPE_OPTIONS,
+} from "@/lib/eventType";
 
 export function AssignmentChip({
   assignment,
@@ -72,6 +78,22 @@ export function AssignmentChip({
         )
       )}
       {assignment.person.name}
+      {assignment.roles.length > 0 && (
+        <span className="flex items-center gap-0.5">
+          {EVENT_TYPE_OPTIONS.filter((type) => assignment.roles.includes(type)).map(
+            (type) => (
+              <span
+                key={type}
+                className="flex h-3.5 w-3.5 items-center justify-center rounded-[3px] text-[8px] font-bold leading-none text-white"
+                style={{ backgroundColor: EVENT_TYPE_COLORS[type] }}
+                title={EVENT_TYPE_LABELS[type]}
+              >
+                {EVENT_TYPE_LETTERS[type]}
+              </span>
+            )
+          )}
+        </span>
+      )}
       {!readOnly && (
         <button
           onClick={onRemove}
