@@ -4,6 +4,7 @@ import { parseDaysInput } from "@/lib/eventDaysValidation";
 import { randomEventColor } from "@/lib/eventColors";
 import { parseLoadingTransportInput } from "@/lib/eventLoadingTransport";
 import { parseEventTypesInput } from "@/lib/eventType";
+import { sortAssignmentsByPersonName } from "@/lib/sortAssignments";
 
 export async function GET(
   _req: NextRequest,
@@ -15,7 +16,6 @@ export async function GET(
     include: {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
-        orderBy: { person: { name: "asc" } },
       },
     },
   });
@@ -24,7 +24,10 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(event);
+  return NextResponse.json({
+    ...event,
+    assignments: sortAssignmentsByPersonName(event.assignments),
+  });
 }
 
 export async function PATCH(
@@ -131,11 +134,20 @@ export async function PATCH(
             notes,
             ...loadingTransport,
           },
-          include: { assignments: true },
+          include: {
+            assignments: {
+              include: { person: { include: { skills: { include: { skill: true } } } } },
+            },
+          },
         });
       }),
     ]);
-    return NextResponse.json(events);
+    const sorted = events.map((event) =>
+      "assignments" in event
+        ? { ...event, assignments: sortAssignmentsByPersonName(event.assignments) }
+        : event
+    );
+    return NextResponse.json(sorted);
   }
 
   const startsAt = body.startsAt ? new Date(body.startsAt) : null;
@@ -165,7 +177,10 @@ export async function PATCH(
       },
     },
   });
-  return NextResponse.json(event);
+  return NextResponse.json({
+    ...event,
+    assignments: sortAssignmentsByPersonName(event.assignments),
+  });
 }
 
 export async function DELETE(

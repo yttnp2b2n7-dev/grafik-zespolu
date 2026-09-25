@@ -4,6 +4,7 @@ import { parseDaysInput } from "@/lib/eventDaysValidation";
 import { randomEventColor } from "@/lib/eventColors";
 import { parseLoadingTransportInput } from "@/lib/eventLoadingTransport";
 import { parseEventTypesInput } from "@/lib/eventType";
+import { sortAssignmentsByPersonName } from "@/lib/sortAssignments";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -29,14 +30,17 @@ export async function GET(req: NextRequest) {
     include: {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
-        orderBy: { person: { name: "asc" } },
       },
     },
     // Historical searches ("to") read best most-recent-first; everything
     // else (weekly grid, upcoming search) reads chronologically forward.
     orderBy: { startsAt: to ? "desc" : "asc" },
   });
-  return NextResponse.json(events);
+  const sorted = events.map((event) => ({
+    ...event,
+    assignments: sortAssignmentsByPersonName(event.assignments),
+  }));
+  return NextResponse.json(sorted);
 }
 
 export async function POST(req: NextRequest) {
