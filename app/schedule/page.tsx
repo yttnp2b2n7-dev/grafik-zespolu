@@ -154,6 +154,10 @@ export default function SchedulePage() {
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [freeDayFilter, setFreeDayFilter] = useState<Date | null>(null);
   const isDraggingRef = useRef(false);
+  // Bumped on every optimistic local edit so a slower-to-resolve background
+  // poll (fired before that edit) can tell its snapshot is now stale and
+  // skip overwriting the newer local state instead of clobbering it.
+  const localVersionRef = useRef(0);
   const isSearching = eventSearch.trim().length > 0 || historicalOnly;
 
   // Day view fetches one extra day before the selected one (but only
@@ -176,10 +180,14 @@ export default function SchedulePage() {
   }, []);
 
   const loadEvents = useCallback(async () => {
+    const versionAtStart = localVersionRef.current;
     const data = await fetchJsonOrNull<Event[]>(
       `/api/events?weekStart=${rangeStart.toISOString()}&weekEnd=${rangeEnd.toISOString()}`
     );
-    if (data) setEvents(data);
+    // If a local edit (drag, toggle, remove...) landed while this request
+    // was in flight, this response is now older than what's on screen -
+    // applying it would revert that edit until the next successful poll.
+    if (data && localVersionRef.current === versionAtStart) setEvents(data);
   }, [rangeStart, rangeEnd]);
 
   const loadUpcomingEvents = useCallback(async () => {
@@ -269,6 +277,7 @@ export default function SchedulePage() {
       });
     }
 
+    localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) => {
         if (ev.id === sourceEventId) {
@@ -311,6 +320,7 @@ export default function SchedulePage() {
       )
     );
 
+    localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) =>
         ev.id === eventId ? { ...ev, assignments: sortByPersonName(created) } : ev
@@ -323,6 +333,7 @@ export default function SchedulePage() {
       ev.assignments.some((a) => a.id === assignmentId)
     )?.id;
 
+    localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) =>
         ev.id !== eventId
@@ -361,6 +372,7 @@ export default function SchedulePage() {
       ? [...assignment.roles, type]
       : assignment.roles.filter((r) => r !== type);
 
+    localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) =>
         ev.id !== eventId
@@ -398,6 +410,7 @@ export default function SchedulePage() {
       ? [...assignment.workTypes, type]
       : assignment.workTypes.filter((t) => t !== type);
 
+    localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) =>
         ev.id !== eventId
@@ -429,6 +442,7 @@ export default function SchedulePage() {
       }
     }
 
+    localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) => ({
         ...ev,
@@ -465,6 +479,7 @@ export default function SchedulePage() {
     // `events` state) so the undo snapshot can't be stale if this event was
     // just touched by another action whose own refresh hadn't landed yet.
     const removed = await fetchJsonOrNull<Event>(`/api/events/${eventId}`);
+    localVersionRef.current += 1;
     setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
     await fetch(`/api/events/${eventId}`, { method: "DELETE" });
 
