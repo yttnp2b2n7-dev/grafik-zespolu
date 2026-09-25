@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     where: { eventId_personId: { eventId, personId } },
     create: { eventId, personId },
     update: {},
-    include: { person: true },
+    include: { person: { include: { skills: { include: { skill: true } } } } },
   });
 
   return NextResponse.json(assignment, { status: 201 });

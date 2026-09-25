@@ -31,7 +31,7 @@ export async function PATCH(
     prisma.assignment.update({
       where: { id },
       data,
-      include: { person: true },
+      include: { person: { include: { skills: { include: { skill: true } } } } },
     }),
     // Only one commander per event: clearing the flag on every other
     // assignment for the same event when marking a new one.
