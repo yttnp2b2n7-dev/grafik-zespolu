@@ -41,6 +41,21 @@ export function LeadIcon({ className }: { className?: string }) {
   );
 }
 
+// When a person has at least one work-type icon (or the commander star)
+// set for a specific assignment, that becomes their color on the chip for
+// that assignment, overriding their default skill-based color - first
+// match in this order wins when more than one is active.
+export function getAssignmentAccentColor(assignment: {
+  isLead: boolean;
+  workTypes: WorkType[];
+}): string | null {
+  for (const type of WORK_TYPE_OPTIONS) {
+    if (assignment.workTypes.includes(type)) return WORK_TYPE_COLORS[type];
+  }
+  if (assignment.isLead) return LEAD_COLOR;
+  return null;
+}
+
 function isWorkType(value: unknown): value is WorkType {
   return (
     typeof value === "string" && (WORK_TYPE_OPTIONS as string[]).includes(value)

@@ -17,6 +17,7 @@ import {
   WORK_TYPE_LABELS,
   WORK_TYPE_OPTIONS,
   WorkTypeIcon,
+  getAssignmentAccentColor,
 } from "@/lib/workType";
 
 export function AssignmentChip({
@@ -41,16 +42,20 @@ export function AssignmentChip({
     disabled: readOnly,
   });
 
-  const color = getPersonColor(assignment.person);
+  const workAccent = getAssignmentAccentColor(assignment);
+  const color = workAccent ?? getPersonColor(assignment.person);
 
   return (
     <span
       ref={setNodeRef}
       {...(readOnly ? {} : { ...listeners, ...attributes })}
-      className={`flex items-center gap-1 rounded-full border border-border-subtle px-2 py-0.5 text-xs text-foreground transition ${
-        readOnly ? "" : "cursor-grab active:cursor-grabbing"
-      } ${isDragging ? "opacity-40" : ""}`}
-      style={{ backgroundColor: `${color}22` }}
+      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs text-foreground transition ${
+        workAccent ? "" : "border-border-subtle"
+      } ${readOnly ? "" : "cursor-grab active:cursor-grabbing"} ${isDragging ? "opacity-40" : ""}`}
+      style={{
+        backgroundColor: `${color}22`,
+        ...(workAccent ? { borderColor: `${workAccent}88` } : {}),
+      }}
     >
       {(assignment.isLead || assignment.workTypes.length > 0) && (
         <span className="flex items-center gap-0.5">
