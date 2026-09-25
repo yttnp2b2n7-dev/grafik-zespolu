@@ -27,9 +27,13 @@ export function EventDetailsModal({
   onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
   hideSkills?: boolean;
 }) {
-  const [activeSmsModal, setActiveSmsModal] = useState<"notify" | "recruit" | null>(
-    null
-  );
+  const [smsFlow, setSmsFlow] = useState<"notify" | "recruit" | null>(null);
+  const [smsMode, setSmsMode] = useState<"auto" | "custom" | null>(null);
+
+  function closeSms() {
+    setSmsFlow(null);
+    setSmsMode(null);
+  }
 
   const start = new Date(event.startsAt);
   const end = new Date(event.endsAt);
@@ -184,7 +188,7 @@ export function EventDetailsModal({
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           {!hideSkills && event.assignments.length > 0 && (
             <button
-              onClick={() => setActiveSmsModal("notify")}
+              onClick={() => setSmsFlow("notify")}
               className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
             >
               Powiadom ekipę
@@ -192,7 +196,7 @@ export function EventDetailsModal({
           )}
           {!hideSkills && (
             <button
-              onClick={() => setActiveSmsModal("recruit")}
+              onClick={() => setSmsFlow("recruit")}
               className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
             >
               Szukaj ekipy
@@ -207,7 +211,40 @@ export function EventDetailsModal({
         </div>
       </div>
 
-      {activeSmsModal === "notify" && (
+      {smsFlow && !smsMode && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-xs rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-foreground">
+              {smsFlow === "notify" ? "Powiadom ekipę" : "Szukaj ekipy"}
+            </h3>
+            <p className="mt-1 text-xs text-muted">Wybierz treść wiadomości SMS.</p>
+            <div className="mt-4 flex flex-col gap-2">
+              <button
+                onClick={() => setSmsMode("auto")}
+                className="rounded-md border border-border-subtle px-3 py-2 text-left text-sm text-foreground transition hover:border-accent"
+              >
+                Wyślij wiadomość automatyczną
+              </button>
+              <button
+                onClick={() => setSmsMode("custom")}
+                className="rounded-md border border-border-subtle px-3 py-2 text-left text-sm text-foreground transition hover:border-accent"
+              >
+                Wyślij swoją wiadomość
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setSmsFlow(null)}
+                className="text-xs text-muted transition hover:text-foreground"
+              >
+                Anuluj
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {smsFlow === "notify" && smsMode && (
         <CrewSmsModal
           heading={`Powiadom ekipę — ${event.title}`}
           subtitle="Wysyłka SMS do osób przypisanych do tego wydarzenia"
@@ -215,13 +252,17 @@ export function EventDetailsModal({
           candidateFilter={(p) =>
             event.assignments.some((a) => a.personId === p.id)
           }
-          defaultMessage={`Cześć!\nMasz robotę do wykonania!\nKlapek oczekuje cię ${notifyDateLabel}\nOdwiedź grafik a dowiesz się więcej na temat tej sztuki.`}
+          defaultMessage={
+            smsMode === "auto"
+              ? `Cześć!\nMasz robotę do wykonania!\nKlapek oczekuje cię ${notifyDateLabel}\nOdwiedź grafik a dowiesz się więcej na temat tej sztuki.`
+              : ""
+          }
           preselectAll
-          onClose={() => setActiveSmsModal(null)}
+          onClose={closeSms}
         />
       )}
 
-      {activeSmsModal === "recruit" && (
+      {smsFlow === "recruit" && smsMode && (
         <CrewSmsModal
           heading={`Szukaj ekipy — ${event.title}`}
           subtitle="Wysyłka SMS do zewnętrznych osób (tag „zewnętrzny” w umiejętnościach)"
@@ -229,8 +270,12 @@ export function EventDetailsModal({
           candidateFilter={(p) =>
             p.skills.some((s) => s.skill.name.toLowerCase() === EXTERNAL_SKILL)
           }
-          defaultMessage={`Cześć !\nSzukamy dodatkowego technika na Event ${event.title} (${recruitDateLabel})\nJeśli masz wolny termin odezwij się do Gabrysi 504064410`}
-          onClose={() => setActiveSmsModal(null)}
+          defaultMessage={
+            smsMode === "auto"
+              ? `Cześć !\nSzukamy dodatkowego technika na Event ${event.title} (${recruitDateLabel})\nJeśli masz wolny termin odezwij się do Gabrysi 504064410`
+              : ""
+          }
+          onClose={closeSms}
         />
       )}
     </div>
