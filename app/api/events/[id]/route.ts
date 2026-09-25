@@ -100,6 +100,11 @@ export async function PATCH(
               notes,
               ...loadingTransport,
             },
+            include: {
+              assignments: {
+                include: { person: { include: { skills: { include: { skill: true } } } } },
+              },
+            },
           });
         }
         if (entry.existingId) {
@@ -108,6 +113,11 @@ export async function PATCH(
           return prisma.event.update({
             where: { id: entry.existingId },
             data: { title: label, groupId },
+            include: {
+              assignments: {
+                include: { person: { include: { skills: { include: { skill: true } } } } },
+              },
+            },
           });
         }
         return prisma.event.create({
@@ -121,6 +131,7 @@ export async function PATCH(
             notes,
             ...loadingTransport,
           },
+          include: { assignments: true },
         });
       }),
     ]);
@@ -148,6 +159,11 @@ export async function PATCH(
   const event = await prisma.event.update({
     where: { id },
     data: { title, startsAt, endsAt, eventTypes, notes, ...loadingTransport },
+    include: {
+      assignments: {
+        include: { person: { include: { skills: { include: { skill: true } } } } },
+      },
+    },
   });
   return NextResponse.json(event);
 }

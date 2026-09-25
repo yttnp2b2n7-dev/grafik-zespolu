@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
 
   const person = await prisma.person.create({
     data: { name, color, email, phone },
+    include: { skills: { include: { skill: true } } },
   });
   return NextResponse.json(person, { status: 201 });
 }

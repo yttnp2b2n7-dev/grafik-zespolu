@@ -23,7 +23,11 @@ export async function PATCH(
     data.phone = typeof body.phone === "string" ? body.phone.trim() || null : null;
   }
 
-  const person = await prisma.person.update({ where: { id }, data });
+  const person = await prisma.person.update({
+    where: { id },
+    data,
+    include: { skills: { include: { skill: true } } },
+  });
   return NextResponse.json(person);
 }
 

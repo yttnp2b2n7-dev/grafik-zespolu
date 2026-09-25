@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
             notes,
             ...loadingTransport,
           },
+          include: { assignments: true },
         })
       )
     );
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
       notes,
       ...loadingTransport,
     },
+    include: { assignments: true },
   });
   return NextResponse.json(event, { status: 201 });
 }
