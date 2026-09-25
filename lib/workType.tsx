@@ -24,6 +24,23 @@ export const WORK_TYPE_COLORS: Record<WorkType, string> = {
   SCENOGRAFIA: "#ec4899",
 };
 
+// The commander star is a separate boolean field (`isLead`), not part of
+// the WorkType enum, but it's shown and toggled the same way - as a 5th
+// icon alongside the 4 work types.
+export const LEAD_COLOR = "#eab308";
+export const LEAD_LABEL = "Dowódca";
+
+export function LeadIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M12 2.5 14.9 8.9 22 9.6 16.6 14.2 18.2 21.1 12 17.4 5.8 21.1 7.4 14.2 2 9.6 9.1 8.9 12 2.5Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
 function isWorkType(value: unknown): value is WorkType {
   return (
     typeof value === "string" && (WORK_TYPE_OPTIONS as string[]).includes(value)

@@ -35,7 +35,16 @@ import {
   EVENT_TYPE_OPTIONS,
   type EventType,
 } from "@/lib/eventType";
-import type { WorkType } from "@/lib/workType";
+import {
+  LEAD_COLOR,
+  LEAD_LABEL,
+  LeadIcon,
+  WORK_TYPE_COLORS,
+  WORK_TYPE_LABELS,
+  WORK_TYPE_OPTIONS,
+  WorkTypeIcon,
+  type WorkType,
+} from "@/lib/workType";
 
 const DAY_LABELS = [
   "Poniedziałek",
@@ -834,6 +843,29 @@ export default function SchedulePage() {
                   </span>
                 </div>
               ))}
+              <span className="h-5 w-px shrink-0 bg-border-subtle" />
+              {WORK_TYPE_OPTIONS.map((type) => (
+                <div key={type} className="flex items-center gap-1.5">
+                  <span
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white"
+                    style={{ backgroundColor: WORK_TYPE_COLORS[type] }}
+                  >
+                    <WorkTypeIcon type={type} className="h-3 w-3" />
+                  </span>
+                  <span className="text-xs text-muted">
+                    {WORK_TYPE_LABELS[type]}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white"
+                  style={{ backgroundColor: LEAD_COLOR }}
+                >
+                  <LeadIcon className="h-3 w-3" />
+                </span>
+                <span className="text-xs text-muted">{LEAD_LABEL}</span>
+              </div>
             </div>
             {viewMode === "week" ? (
             <div className="overflow-x-auto">

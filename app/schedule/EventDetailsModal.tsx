@@ -12,6 +12,9 @@ import {
   type EventType,
 } from "@/lib/eventType";
 import {
+  LEAD_COLOR,
+  LEAD_LABEL,
+  LeadIcon,
   WORK_TYPE_COLORS,
   WORK_TYPE_LABELS,
   WORK_TYPE_OPTIONS,
@@ -19,7 +22,6 @@ import {
   type WorkType,
 } from "@/lib/workType";
 import { CrewSmsModal } from "./CrewSmsModal";
-import { getPersonColor } from "@/lib/personGroup";
 
 const EXTERNAL_SKILL = "zewnętrzny";
 
@@ -28,12 +30,14 @@ export function EventDetailsModal({
   onClose,
   onToggleRole,
   onToggleWorkType,
+  onToggleLead,
   hideSkills,
 }: {
   event: Event;
   onClose: () => void;
   onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
   onToggleWorkType?: (assignmentId: string, type: WorkType, checked: boolean) => void;
+  onToggleLead?: (assignmentId: string, isLead: boolean) => void;
   hideSkills?: boolean;
 }) {
   const [smsFlow, setSmsFlow] = useState<"notify" | "recruit" | null>(null);
@@ -126,21 +130,13 @@ export function EventDetailsModal({
                 );
                 const editable = !hideSkills && !!onToggleRole;
                 const workTypeEditable = !hideSkills && !!onToggleWorkType;
+                const leadEditable = !hideSkills && !!onToggleLead;
                 return (
                   <li
                     key={a.id}
                     className="flex flex-col gap-1.5 rounded-md border border-border-subtle bg-background px-3 py-1.5 text-sm"
                   >
                     <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ backgroundColor: getPersonColor(a.person) }}
-                      />
-                      {a.isLead && (
-                        <span className="text-yellow-400" title="Dowódca wydarzenia">
-                          ★
-                        </span>
-                      )}
                       <span className="text-foreground">{a.person.name}</span>
                       {!hideSkills && a.person.skills.length > 0 && (
                         <span className="text-xs text-muted">
@@ -148,7 +144,10 @@ export function EventDetailsModal({
                         </span>
                       )}
                     </div>
-                    {(workTypeEditable || a.workTypes.length > 0) && (
+                    {(workTypeEditable ||
+                      leadEditable ||
+                      a.workTypes.length > 0 ||
+                      a.isLead) && (
                       <div className="flex flex-wrap gap-1">
                         {WORK_TYPE_OPTIONS.map((type) => {
                           const active = a.workTypes.includes(type);
@@ -186,6 +185,32 @@ export function EventDetailsModal({
                             </button>
                           );
                         })}
+                        {leadEditable ? (
+                          <button
+                            type="button"
+                            onClick={() => onToggleLead(a.id, !a.isLead)}
+                            title={LEAD_LABEL}
+                            aria-pressed={a.isLead}
+                            className={`flex h-5 w-5 items-center justify-center rounded transition ${
+                              a.isLead
+                                ? "text-white"
+                                : "border border-border-subtle text-muted/50 hover:border-accent hover:text-foreground"
+                            }`}
+                            style={a.isLead ? { backgroundColor: LEAD_COLOR } : undefined}
+                          >
+                            <LeadIcon className="h-3 w-3" />
+                          </button>
+                        ) : (
+                          a.isLead && (
+                            <span
+                              className="flex h-5 w-5 items-center justify-center rounded text-white"
+                              style={{ backgroundColor: LEAD_COLOR }}
+                              title={LEAD_LABEL}
+                            >
+                              <LeadIcon className="h-3 w-3" />
+                            </span>
+                          )
+                        )}
                       </div>
                     )}
                     {availableTypes.length > 0 && (

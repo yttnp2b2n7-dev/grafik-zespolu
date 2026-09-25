@@ -10,6 +10,9 @@ import {
   EVENT_TYPE_OPTIONS,
 } from "@/lib/eventType";
 import {
+  LEAD_COLOR,
+  LEAD_LABEL,
+  LeadIcon,
   WORK_TYPE_COLORS,
   WORK_TYPE_LABELS,
   WORK_TYPE_OPTIONS,
@@ -20,13 +23,11 @@ export function AssignmentChip({
   assignment,
   eventId,
   onRemove,
-  onToggleLead,
   readOnly,
 }: {
   assignment: Assignment;
   eventId: string;
   onRemove: () => void;
-  onToggleLead?: () => void;
   readOnly?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -51,40 +52,17 @@ export function AssignmentChip({
       } ${isDragging ? "opacity-40" : ""}`}
       style={{ backgroundColor: `${color}22` }}
     >
-      <span
-        className="h-1.5 w-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: color }}
-      />
-      {!readOnly && onToggleLead ? (
-        <button
-          onClick={onToggleLead}
-          className={`leading-none transition ${
-            assignment.isLead
-              ? "text-yellow-400"
-              : "text-muted/30 hover:text-yellow-400/70"
-          }`}
-          aria-label={
-            assignment.isLead
-              ? `Odznacz ${assignment.person.name} jako dowódcę`
-              : `Oznacz ${assignment.person.name} jako dowódcę`
-          }
-          title={assignment.isLead ? "Dowódca wydarzenia" : "Ustaw jako dowódcę"}
-        >
-          {assignment.isLead ? "★" : "☆"}
-        </button>
-      ) : (
-        assignment.isLead && (
-          <span
-            className="leading-none text-yellow-400"
-            title="Dowódca wydarzenia"
-            aria-label="Dowódca wydarzenia"
-          >
-            ★
-          </span>
-        )
-      )}
-      {assignment.workTypes.length > 0 && (
+      {(assignment.isLead || assignment.workTypes.length > 0) && (
         <span className="flex items-center gap-0.5">
+          {assignment.isLead && (
+            <span
+              className="flex h-3.5 w-3.5 items-center justify-center rounded-[3px] text-white"
+              style={{ backgroundColor: LEAD_COLOR }}
+              title={LEAD_LABEL}
+            >
+              <LeadIcon className="h-2.5 w-2.5" />
+            </span>
+          )}
           {WORK_TYPE_OPTIONS.filter((type) => assignment.workTypes.includes(type)).map(
             (type) => (
               <span

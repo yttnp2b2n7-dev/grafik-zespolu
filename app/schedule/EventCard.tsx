@@ -137,9 +137,6 @@ export function EventCard({
             assignment={a}
             eventId={event.id}
             onRemove={() => onRemoveAssignment(a.id)}
-            onToggleLead={
-              onToggleLead ? () => onToggleLead(a.id, !a.isLead) : undefined
-            }
             readOnly={readOnly}
           />
         ))}
@@ -194,6 +191,7 @@ export function EventCard({
           onClose={() => setShowDetails(false)}
           onToggleRole={onToggleRole}
           onToggleWorkType={onToggleWorkType}
+          onToggleLead={onToggleLead}
           hideSkills={readOnly}
         />
       )}
