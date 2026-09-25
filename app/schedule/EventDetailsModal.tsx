@@ -11,6 +11,13 @@ import {
   EVENT_TYPE_OPTIONS,
   type EventType,
 } from "@/lib/eventType";
+import {
+  WORK_TYPE_COLORS,
+  WORK_TYPE_LABELS,
+  WORK_TYPE_OPTIONS,
+  WorkTypeIcon,
+  type WorkType,
+} from "@/lib/workType";
 import { CrewSmsModal } from "./CrewSmsModal";
 import { getPersonColor } from "@/lib/personGroup";
 
@@ -20,11 +27,13 @@ export function EventDetailsModal({
   event,
   onClose,
   onToggleRole,
+  onToggleWorkType,
   hideSkills,
 }: {
   event: Event;
   onClose: () => void;
   onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
+  onToggleWorkType?: (assignmentId: string, type: WorkType, checked: boolean) => void;
   hideSkills?: boolean;
 }) {
   const [smsFlow, setSmsFlow] = useState<"notify" | "recruit" | null>(null);
@@ -116,6 +125,7 @@ export function EventDetailsModal({
                   event.eventTypes.includes(type)
                 );
                 const editable = !hideSkills && !!onToggleRole;
+                const workTypeEditable = !hideSkills && !!onToggleWorkType;
                 return (
                   <li
                     key={a.id}
@@ -138,6 +148,46 @@ export function EventDetailsModal({
                         </span>
                       )}
                     </div>
+                    {(workTypeEditable || a.workTypes.length > 0) && (
+                      <div className="flex flex-wrap gap-1">
+                        {WORK_TYPE_OPTIONS.map((type) => {
+                          const active = a.workTypes.includes(type);
+                          if (!workTypeEditable) {
+                            return active ? (
+                              <span
+                                key={type}
+                                className="flex h-5 w-5 items-center justify-center rounded text-white"
+                                style={{ backgroundColor: WORK_TYPE_COLORS[type] }}
+                                title={WORK_TYPE_LABELS[type]}
+                              >
+                                <WorkTypeIcon type={type} className="h-3 w-3" />
+                              </span>
+                            ) : null;
+                          }
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => onToggleWorkType(a.id, type, !active)}
+                              title={WORK_TYPE_LABELS[type]}
+                              aria-pressed={active}
+                              className={`flex h-5 w-5 items-center justify-center rounded transition ${
+                                active
+                                  ? "text-white"
+                                  : "border border-border-subtle text-muted/50 hover:border-accent hover:text-foreground"
+                              }`}
+                              style={
+                                active
+                                  ? { backgroundColor: WORK_TYPE_COLORS[type] }
+                                  : undefined
+                              }
+                            >
+                              <WorkTypeIcon type={type} className="h-3 w-3" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                     {availableTypes.length > 0 && (
                       <div className="flex flex-wrap gap-1">
                         {availableTypes.map((type) => {

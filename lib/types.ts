@@ -1,4 +1,5 @@
 import type { EventType } from "./eventType";
+import type { WorkType } from "./workType";
 
 export type Skill = {
   id: string;
@@ -27,6 +28,7 @@ export type Assignment = {
   personId: string;
   isLead: boolean;
   roles: EventType[];
+  workTypes: WorkType[];
   person: Person;
 };
 

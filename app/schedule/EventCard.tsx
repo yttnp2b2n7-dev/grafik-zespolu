@@ -16,12 +16,14 @@ import {
   getEventTypeAccentColor,
   type EventType,
 } from "@/lib/eventType";
+import type { WorkType } from "@/lib/workType";
 
 export function EventCard({
   event,
   onRemoveAssignment,
   onToggleLead,
   onToggleRole,
+  onToggleWorkType,
   onDelete,
   onEdit,
   onCopyFromPreviousDay,
@@ -31,6 +33,7 @@ export function EventCard({
   onRemoveAssignment: (assignmentId: string) => void;
   onToggleLead?: (assignmentId: string, isLead: boolean) => void;
   onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
+  onToggleWorkType?: (assignmentId: string, type: WorkType, checked: boolean) => void;
   onDelete: () => void;
   onEdit: () => void;
   onCopyFromPreviousDay?: () => void;
@@ -190,6 +193,7 @@ export function EventCard({
           event={event}
           onClose={() => setShowDetails(false)}
           onToggleRole={onToggleRole}
+          onToggleWorkType={onToggleWorkType}
           hideSkills={readOnly}
         />
       )}

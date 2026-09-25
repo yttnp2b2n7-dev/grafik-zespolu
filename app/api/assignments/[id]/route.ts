@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { parseEventTypesInput, type EventType } from "@/lib/eventType";
+import { parseWorkTypesInput, type WorkType } from "@/lib/workType";
 
 export async function PATCH(
   req: NextRequest,
@@ -17,7 +18,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const data: { isLead?: boolean; roles?: EventType[] } = {};
+  const data: { isLead?: boolean; roles?: EventType[]; workTypes?: WorkType[] } = {};
   if ("isLead" in body) {
     data.isLead = body.isLead === true;
   }
@@ -25,6 +26,9 @@ export async function PATCH(
     // A person can only be tagged with roles the event itself carries.
     const allowed = new Set(assignment.event.eventTypes);
     data.roles = parseEventTypesInput(body.roles).filter((r) => allowed.has(r));
+  }
+  if ("workTypes" in body) {
+    data.workTypes = parseWorkTypesInput(body.workTypes);
   }
 
   const [updated] = await prisma.$transaction([

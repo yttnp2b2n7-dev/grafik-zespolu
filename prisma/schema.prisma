@@ -41,6 +41,13 @@ enum EventType {
   ZALADUNEK
 }
 
+enum WorkType {
+  OSWIETLENIE
+  MULTIMEDIA
+  DZWIEK
+  SCENOGRAFIA
+}
+
 model Event {
   id                String       @id @default(cuid())
   title             String
@@ -60,13 +67,14 @@ model Event {
 }
 
 model Assignment {
-  id       String      @id @default(cuid())
-  eventId  String
-  personId String
-  isLead   Boolean     @default(false)
-  roles    EventType[] @default([])
-  event    Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  person   Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
+  id        String      @id @default(cuid())
+  eventId   String
+  personId  String
+  isLead    Boolean     @default(false)
+  roles     EventType[] @default([])
+  workTypes WorkType[]  @default([])
+  event     Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  person    Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, personId])
 }

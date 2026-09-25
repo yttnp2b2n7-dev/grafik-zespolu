@@ -9,6 +9,12 @@ import {
   EVENT_TYPE_LABELS,
   EVENT_TYPE_OPTIONS,
 } from "@/lib/eventType";
+import {
+  WORK_TYPE_COLORS,
+  WORK_TYPE_LABELS,
+  WORK_TYPE_OPTIONS,
+  WorkTypeIcon,
+} from "@/lib/workType";
 
 export function AssignmentChip({
   assignment,
@@ -76,6 +82,22 @@ export function AssignmentChip({
             ★
           </span>
         )
+      )}
+      {assignment.workTypes.length > 0 && (
+        <span className="flex items-center gap-0.5">
+          {WORK_TYPE_OPTIONS.filter((type) => assignment.workTypes.includes(type)).map(
+            (type) => (
+              <span
+                key={type}
+                className="flex h-3.5 w-3.5 items-center justify-center rounded-[3px] text-white"
+                style={{ backgroundColor: WORK_TYPE_COLORS[type] }}
+                title={WORK_TYPE_LABELS[type]}
+              >
+                <WorkTypeIcon type={type} className="h-2.5 w-2.5" />
+              </span>
+            )
+          )}
+        </span>
       )}
       {assignment.person.name}
       {assignment.roles.length > 0 && (
