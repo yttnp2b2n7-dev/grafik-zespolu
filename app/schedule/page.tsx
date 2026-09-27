@@ -153,6 +153,12 @@ export default function SchedulePage() {
   const [historicalEvents, setHistoricalEvents] = useState<Event[]>([]);
   const [historicalLoading, setHistoricalLoading] = useState(false);
   const [freeDayFilter, setFreeDayFilter] = useState<Date | null>(null);
+  const [conflictConfirm, setConflictConfirm] = useState<{
+    personId: string;
+    personName: string;
+    eventId: string;
+    conflictTitle: string;
+  } | null>(null);
   const isDraggingRef = useRef(false);
   // Bumped on every optimistic local edit so a slower-to-resolve background
   // poll (fired before that edit) can tell its snapshot is now stale and
@@ -248,21 +254,34 @@ export default function SchedulePage() {
     setDraggedPerson(person ?? null);
   }
 
-  async function handleDragEnd(e: DragEndEvent) {
-    isDraggingRef.current = false;
-    setDraggedPerson(null);
-    const { active, over } = e;
-    if (!over) return;
+  // Finds another event on the same calendar day as `eventId` that already
+  // has this person assigned, so a fresh drag-in can warn about a probable
+  // double-booking instead of silently allowing it.
+  function findSameDayConflict(personId: string, eventId: string): Event | null {
+    const target = events.find((ev) => ev.id === eventId);
+    if (!target) return null;
+    const targetDay = new Date(target.startsAt);
+    return (
+      events.find(
+        (ev) =>
+          ev.id !== eventId &&
+          isSameDay(new Date(ev.startsAt), targetDay) &&
+          ev.assignments.some((a) => a.personId === personId)
+      ) ?? null
+    );
+  }
 
-    const activeData = active.data.current;
-    const personId = activeData?.person?.id as string | undefined;
-    const eventId = over.data.current?.eventId as string | undefined;
-    if (!personId || !eventId) return;
-
-    const sourceEventId = activeData?.sourceEventId as string | undefined;
-    const sourceAssignmentId = activeData?.assignmentId as string | undefined;
-    if (sourceEventId && sourceEventId === eventId) return;
-
+  async function assignPersonToEvent({
+    personId,
+    eventId,
+    sourceEventId,
+    sourceAssignmentId,
+  }: {
+    personId: string;
+    eventId: string;
+    sourceEventId?: string;
+    sourceAssignmentId?: string;
+  }) {
     const res = await fetch("/api/assignments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -297,6 +316,52 @@ export default function SchedulePage() {
         return ev;
       })
     );
+  }
+
+  async function handleDragEnd(e: DragEndEvent) {
+    isDraggingRef.current = false;
+    setDraggedPerson(null);
+    const { active, over } = e;
+    if (!over) return;
+
+    const activeData = active.data.current;
+    const personId = activeData?.person?.id as string | undefined;
+    const personName = activeData?.person?.name as string | undefined;
+    const eventId = over.data.current?.eventId as string | undefined;
+    if (!personId || !eventId) return;
+
+    const sourceEventId = activeData?.sourceEventId as string | undefined;
+    const sourceAssignmentId = activeData?.assignmentId as string | undefined;
+    if (sourceEventId && sourceEventId === eventId) return;
+
+    // Moving an existing chip between events doesn't create a new
+    // same-day booking (the person leaves one event and joins another),
+    // so the warning only applies to a fresh drag from the sidebar.
+    if (!sourceEventId) {
+      const conflict = findSameDayConflict(personId, eventId);
+      if (conflict) {
+        setConflictConfirm({
+          personId,
+          personName: personName ?? "Ta osoba",
+          eventId,
+          conflictTitle: conflict.title,
+        });
+        return;
+      }
+    }
+
+    await assignPersonToEvent({ personId, eventId, sourceEventId, sourceAssignmentId });
+  }
+
+  async function confirmConflictAssign() {
+    if (!conflictConfirm) return;
+    const { personId, eventId } = conflictConfirm;
+    setConflictConfirm(null);
+    await assignPersonToEvent({ personId, eventId });
+  }
+
+  function cancelConflictAssign() {
+    setConflictConfirm(null);
   }
 
   async function copyCrewFromPreviousDay(eventId: string) {
@@ -1063,6 +1128,33 @@ export default function SchedulePage() {
           onClose={() => setEditingEvent(null)}
           onSubmit={(data) => updateEvent(editingEvent.id, data)}
         />
+      )}
+
+      {conflictConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-foreground">Uwaga!</h3>
+            <p className="mt-2 text-sm text-muted">
+              Ta osoba ({conflictConfirm.personName}) jest już przypisana do
+              wydarzenia „{conflictConfirm.conflictTitle}” tego samego dnia.
+              Czy jesteś pewien, że chcesz ją dopisać do kolejnego?
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={cancelConflictAssign}
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
+              >
+                Odrzuć
+              </button>
+              <button
+                onClick={confirmConflictAssign}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+              >
+                Potwierdź
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </DndContext>
   );
