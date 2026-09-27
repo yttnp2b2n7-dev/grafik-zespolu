@@ -17,6 +17,19 @@ model Person {
   createdAt   DateTime      @default(now())
   skills      PersonSkill[]
   assignments Assignment[]
+  vacations   Vacation[]
+}
+
+model Vacation {
+  id        String   @id @default(cuid())
+  personId  String
+  startDate DateTime
+  endDate   DateTime
+  note      String?
+  createdAt DateTime @default(now())
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@index([personId])
 }
 
 model Skill {

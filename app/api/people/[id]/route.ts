@@ -26,7 +26,10 @@ export async function PATCH(
   const person = await prisma.person.update({
     where: { id },
     data,
-    include: { skills: { include: { skill: true } } },
+    include: {
+      skills: { include: { skill: true } },
+      vacations: { orderBy: { startDate: "asc" } },
+    },
   });
   return NextResponse.json(person);
 }

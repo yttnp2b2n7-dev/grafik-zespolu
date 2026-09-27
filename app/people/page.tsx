@@ -5,9 +5,11 @@ import type { Person, Skill } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import { getPersonColor } from "@/lib/personGroup";
 import { useUndo } from "@/lib/undo-context";
+import { VacationsPanel } from "./VacationsPanel";
 
 export default function PeoplePage() {
   const pushUndo = useUndo();
+  const [tab, setTab] = useState<"osoby" | "urlopy">("osoby");
   const [people, setPeople] = useState<Person[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -159,6 +161,37 @@ export default function PeoplePage() {
         później do wydarzeń w grafiku.
       </p>
 
+      <div className="mt-4 flex rounded-md border border-border-subtle p-0.5 w-fit">
+        <button
+          onClick={() => setTab("osoby")}
+          className={`rounded px-3 py-1.5 text-sm font-medium transition ${
+            tab === "osoby"
+              ? "bg-accent text-white"
+              : "text-muted hover:text-foreground"
+          }`}
+        >
+          Osoby
+        </button>
+        <button
+          onClick={() => setTab("urlopy")}
+          className={`rounded px-3 py-1.5 text-sm font-medium transition ${
+            tab === "urlopy"
+              ? "bg-accent text-white"
+              : "text-muted hover:text-foreground"
+          }`}
+        >
+          Urlopy
+        </button>
+      </div>
+
+      {tab === "urlopy" && (
+        <div className="mt-6">
+          <VacationsPanel people={people} />
+        </div>
+      )}
+
+      {tab === "osoby" && (
+        <>
       <form
         onSubmit={addPerson}
         className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface p-4"
@@ -224,6 +257,8 @@ export default function PeoplePage() {
           />
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }

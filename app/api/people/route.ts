@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   const people = await prisma.person.findMany({
-    include: { skills: { include: { skill: true } } },
+    include: {
+      skills: { include: { skill: true } },
+      vacations: { orderBy: { startDate: "asc" } },
+    },
     orderBy: { name: "asc" },
   });
   return NextResponse.json(people);
@@ -22,7 +25,10 @@ export async function POST(req: NextRequest) {
 
   const person = await prisma.person.create({
     data: { name, color, email, phone },
-    include: { skills: { include: { skill: true } } },
+    include: {
+      skills: { include: { skill: true } },
+      vacations: true,
+    },
   });
   return NextResponse.json(person, { status: 201 });
 }

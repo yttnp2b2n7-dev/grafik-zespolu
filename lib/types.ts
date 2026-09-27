@@ -12,6 +12,16 @@ export type PersonSkill = {
   skill: Skill;
 };
 
+export type Vacation = {
+  id: string;
+  personId: string;
+  startDate: string;
+  endDate: string;
+  note: string | null;
+  createdAt: string;
+  person?: { id: string; name: string };
+};
+
 export type Person = {
   id: string;
   name: string;
@@ -20,6 +30,7 @@ export type Person = {
   phone: string | null;
   createdAt: string;
   skills: PersonSkill[];
+  vacations: Vacation[];
 };
 
 export type Assignment = {

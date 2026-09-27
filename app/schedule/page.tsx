@@ -45,6 +45,8 @@ import {
   WorkTypeIcon,
   type WorkType,
 } from "@/lib/workType";
+import { parseLocalDate } from "@/lib/localDate";
+import { isPersonOnVacationOn } from "@/lib/vacation";
 
 const DAY_LABELS = [
   "Poniedziałek",
@@ -122,14 +124,6 @@ function sortByPersonName(assignments: Assignment[]): Assignment[] {
   );
 }
 
-// `<input type="date">` values parse to UTC midnight via `new Date(string)`,
-// which can land on the wrong day once shifted to local time - this keeps it
-// anchored to local midnight instead.
-function parseLocalDate(value: string): Date {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
 export default function SchedulePage() {
   const { role } = useSession();
   const pushUndo = useUndo();
@@ -158,6 +152,11 @@ export default function SchedulePage() {
     personName: string;
     eventId: string;
     conflictTitle: string;
+  } | null>(null);
+  const [vacationBlock, setVacationBlock] = useState<{
+    personName: string;
+    startDate: string;
+    endDate: string;
   } | null>(null);
   const isDraggingRef = useRef(false);
   // Bumped on every optimistic local edit so a slower-to-resolve background
@@ -325,8 +324,9 @@ export default function SchedulePage() {
     if (!over) return;
 
     const activeData = active.data.current;
-    const personId = activeData?.person?.id as string | undefined;
-    const personName = activeData?.person?.name as string | undefined;
+    const draggedPersonData = activeData?.person as Person | undefined;
+    const personId = draggedPersonData?.id;
+    const personName = draggedPersonData?.name;
     const eventId = over.data.current?.eventId as string | undefined;
     if (!personId || !eventId) return;
 
@@ -335,9 +335,24 @@ export default function SchedulePage() {
     if (sourceEventId && sourceEventId === eventId) return;
 
     // Moving an existing chip between events doesn't create a new
-    // same-day booking (the person leaves one event and joins another),
-    // so the warning only applies to a fresh drag from the sidebar.
+    // same-day booking (or a new vacation conflict) - the person leaves
+    // one event and joins another - so these checks only apply to a
+    // fresh drag from the sidebar.
     if (!sourceEventId) {
+      const targetEvent = events.find((ev) => ev.id === eventId);
+      const vacation =
+        targetEvent && draggedPersonData
+          ? isPersonOnVacationOn(draggedPersonData, new Date(targetEvent.startsAt))
+          : null;
+      if (vacation) {
+        setVacationBlock({
+          personName: personName ?? "Ta osoba",
+          startDate: vacation.startDate,
+          endDate: vacation.endDate,
+        });
+        return;
+      }
+
       const conflict = findSameDayConflict(personId, eventId);
       if (conflict) {
         setConflictConfirm({
@@ -351,6 +366,10 @@ export default function SchedulePage() {
     }
 
     await assignPersonToEvent({ personId, eventId, sourceEventId, sourceAssignmentId });
+  }
+
+  function closeVacationBlock() {
+    setVacationBlock(null);
   }
 
   async function confirmConflictAssign() {
@@ -1151,6 +1170,29 @@ export default function SchedulePage() {
                 className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
               >
                 Potwierdź
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {vacationBlock && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-foreground">Uwaga!</h3>
+            <p className="mt-2 text-sm text-muted">
+              Ta osoba ({vacationBlock.personName}) ma urlop w tym dniu (
+              {format(new Date(vacationBlock.startDate), "d MMM", { locale: pl })}
+              {" – "}
+              {format(new Date(vacationBlock.endDate), "d MMM yyyy", { locale: pl })}
+              ). Nie można jej przypisać do wydarzenia.
+            </p>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={closeVacationBlock}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+              >
+                OK
               </button>
             </div>
           </div>
