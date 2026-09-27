@@ -329,7 +329,7 @@ export function EventDetailsModal({
           }
           defaultMessage={
             smsMode === "auto"
-              ? `Cześć!\nMasz robotę do wykonania!\nKlapek oczekuje cię ${notifyDateLabel}\nOdwiedź grafik a dowiesz się więcej na temat tej sztuki.`
+              ? `Cześć!\nMasz robotę do wykonania!\nKlapek oczekuje cię ${notifyDateLabel}\nOdwiedź grafik, a dowiesz się więcej na temat tej sztuki.`
               : ""
           }
           preselectAll
@@ -347,7 +347,7 @@ export function EventDetailsModal({
           }
           defaultMessage={
             smsMode === "auto"
-              ? `Cześć !\nSzukamy dodatkowego technika na Event ${event.title} (${recruitDateLabel})\nJeśli masz wolny termin odezwij się do Gabrysi 504064410`
+              ? `Cześć!\nSzukamy dodatkowego technika na Event ${event.title} (${recruitDateLabel})\nJeśli masz wolny termin, odezwij się do Gabrysi 504064410`
               : ""
           }
           onClose={closeSms}
