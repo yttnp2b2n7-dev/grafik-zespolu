@@ -140,6 +140,7 @@ export default function SchedulePage() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
   const [personSearch, setPersonSearch] = useState("");
+  const [peopleExpanded, setPeopleExpanded] = useState(false);
   const [eventSearch, setEventSearch] = useState("");
   const [historicalOnly, setHistoricalOnly] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
@@ -674,6 +675,10 @@ export default function SchedulePage() {
         )) &&
       (!freeDayAssignedIds || !freeDayAssignedIds.has(person.id))
   );
+  const PEOPLE_COLLAPSED_LIMIT = 10;
+  const visiblePeople = peopleExpanded
+    ? filteredPeople
+    : filteredPeople.slice(0, PEOPLE_COLLAPSED_LIMIT);
 
   const eventSearchQuery = eventSearch.trim().toLowerCase();
   const searchSource = historicalOnly ? historicalEvents : upcomingEvents;
@@ -885,7 +890,7 @@ export default function SchedulePage() {
           className={`mt-6 grid grid-cols-1 gap-6 ${isAdmin ? "lg:grid-cols-[200px_1fr]" : ""}`}
         >
           {isAdmin && (
-            <aside className="h-max rounded-lg border border-border-subtle bg-surface/50 p-3 lg:sticky lg:top-6">
+            <aside className="h-max rounded-lg border border-border-subtle bg-surface/50 p-3">
               <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
                 Ludzie
               </p>
@@ -910,7 +915,7 @@ export default function SchedulePage() {
                 className="mb-2 w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
               />
               <div className="flex flex-col gap-1.5">
-                {filteredPeople.map((person) => (
+                {visiblePeople.map((person) => (
                   <PersonTile key={person.id} person={person} />
                 ))}
                 {people.length === 0 && (
@@ -924,6 +929,16 @@ export default function SchedulePage() {
                   </p>
                 )}
               </div>
+              {filteredPeople.length > PEOPLE_COLLAPSED_LIMIT && (
+                <button
+                  onClick={() => setPeopleExpanded((prev) => !prev)}
+                  className="mt-2 w-full rounded-md border border-border-subtle px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-foreground"
+                >
+                  {peopleExpanded
+                    ? "Zwiń listę"
+                    : `Pokaż więcej (${filteredPeople.length - PEOPLE_COLLAPSED_LIMIT})`}
+                </button>
+              )}
             </aside>
           )}
 
