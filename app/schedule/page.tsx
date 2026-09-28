@@ -47,6 +47,7 @@ import {
 } from "@/lib/workType";
 import { parseLocalDate } from "@/lib/localDate";
 import { isPersonOnVacationOn } from "@/lib/vacation";
+import { usePolling } from "@/lib/usePolling";
 
 const DAY_LABELS = [
   "Poniedziałek",
@@ -223,30 +224,27 @@ export default function SchedulePage() {
     setFreeDayFilter(null);
   }, [viewMode, weekStart, dayViewDate]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (isDraggingRef.current) return;
-      if (isAdmin) loadPeople();
-      loadEvents();
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isAdmin, loadPeople, loadEvents]);
+  usePolling(() => {
+    if (isDraggingRef.current) return;
+    if (isAdmin) loadPeople();
+    loadEvents();
+  }, 15000);
 
   useEffect(() => {
     if (!isSearching || historicalOnly) return;
     setUpcomingLoading(true);
     loadUpcomingEvents().finally(() => setUpcomingLoading(false));
-    const interval = setInterval(loadUpcomingEvents, 5000);
-    return () => clearInterval(interval);
   }, [isSearching, historicalOnly, loadUpcomingEvents]);
+
+  usePolling(loadUpcomingEvents, 15000, isSearching && !historicalOnly);
 
   useEffect(() => {
     if (!historicalOnly) return;
     setHistoricalLoading(true);
     loadHistoricalEvents().finally(() => setHistoricalLoading(false));
-    const interval = setInterval(loadHistoricalEvents, 5000);
-    return () => clearInterval(interval);
   }, [historicalOnly, loadHistoricalEvents]);
+
+  usePolling(loadHistoricalEvents, 15000, historicalOnly);
 
   function handleDragStart(e: DragStartEvent) {
     isDraggingRef.current = true;

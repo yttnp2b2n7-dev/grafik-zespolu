@@ -7,6 +7,7 @@ import type { Person, Vacation } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import { parseLocalDate } from "@/lib/localDate";
 import { useUndo } from "@/lib/undo-context";
+import { usePolling } from "@/lib/usePolling";
 
 export function VacationsPanel({ people }: { people: Person[] }) {
   const pushUndo = useUndo();
@@ -26,9 +27,9 @@ export function VacationsPanel({ people }: { people: Person[] }) {
 
   useEffect(() => {
     loadVacations();
-    const interval = setInterval(loadVacations, 5000);
-    return () => clearInterval(interval);
   }, []);
+
+  usePolling(loadVacations, 15000);
 
   async function addVacation(e: React.FormEvent) {
     e.preventDefault();

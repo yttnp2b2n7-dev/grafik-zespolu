@@ -5,6 +5,7 @@ import type { Person, Skill } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import { getPersonColor } from "@/lib/personGroup";
 import { useUndo } from "@/lib/undo-context";
+import { usePolling } from "@/lib/usePolling";
 import { VacationsPanel } from "./VacationsPanel";
 
 export default function PeoplePage() {
@@ -31,9 +32,9 @@ export default function PeoplePage() {
 
   useEffect(() => {
     loadAll();
-    const interval = setInterval(loadAll, 5000);
-    return () => clearInterval(interval);
   }, []);
+
+  usePolling(loadAll, 15000);
 
   const skillNames = useMemo(() => skills.map((s) => s.name), [skills]);
 

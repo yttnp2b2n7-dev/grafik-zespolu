@@ -77,6 +77,8 @@ model Event {
   assignments       Assignment[]
 
   @@index([groupId])
+  @@index([startsAt])
+  @@index([endsAt])
 }
 
 model Assignment {
