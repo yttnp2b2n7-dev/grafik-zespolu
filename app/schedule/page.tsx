@@ -890,7 +890,7 @@ export default function SchedulePage() {
           className={`mt-6 grid grid-cols-1 gap-6 ${isAdmin ? "lg:grid-cols-[200px_1fr]" : ""}`}
         >
           {isAdmin && (
-            <aside className="h-max rounded-lg border border-border-subtle bg-surface/50 p-3">
+            <aside className="h-max max-h-[calc(100vh-3rem)] overflow-y-auto rounded-lg border border-border-subtle bg-surface/50 p-3 lg:sticky lg:top-6">
               <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
                 Ludzie
               </p>
