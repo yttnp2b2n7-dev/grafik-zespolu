@@ -7,6 +7,7 @@ import { useSession } from "../session-context";
 const links = [
   { href: "/schedule", label: "Grafik" },
   { href: "/people", label: "Ludzie" },
+  { href: "/fleet", label: "Flota" },
   { href: "/reports", label: "Raport" },
 ];
 

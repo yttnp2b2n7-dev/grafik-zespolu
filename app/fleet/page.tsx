@@ -1,0 +1,428 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { pl } from "date-fns/locale";
+import type { Vehicle } from "@/lib/types";
+import { fetchJsonOrNull } from "@/lib/clientFetch";
+import { parseLocalDate } from "@/lib/localDate";
+import { useUndo } from "@/lib/undo-context";
+import { usePolling } from "@/lib/usePolling";
+import { getExpiryStatus, type ExpiryStatus } from "@/lib/vehicleExpiry";
+
+function ExpiryBadge({ label, date }: { label: string; date: string | null }) {
+  const status = getExpiryStatus(date);
+  if (!date || !status) return null;
+
+  const styles: Record<ExpiryStatus, string> = {
+    expired: "bg-danger/15 text-danger",
+    soon: "bg-amber-500/15 text-amber-600",
+    ok: "bg-background text-muted",
+  };
+  const text: Record<ExpiryStatus, string> = {
+    expired: "przeterminowany",
+    soon: "kończy się",
+    ok: "ważny",
+  };
+
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs ${styles[status]}`}>
+      {label}: {format(new Date(date), "d MMM yyyy", { locale: pl })} ({text[status]})
+    </span>
+  );
+}
+
+export default function FleetPage() {
+  const pushUndo = useUndo();
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState("");
+  const [newPlate, setNewPlate] = useState("");
+  const [newType, setNewType] = useState("");
+  const [newCapacity, setNewCapacity] = useState("");
+  const [newInspection, setNewInspection] = useState("");
+  const [newInsurance, setNewInsurance] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  async function loadVehicles() {
+    const data = await fetchJsonOrNull<Vehicle[]>("/api/vehicles");
+    if (data) setVehicles(data);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    loadVehicles();
+  }, []);
+
+  usePolling(loadVehicles, 15000);
+
+  const searchQuery = search.trim().toLowerCase();
+  const filteredVehicles = vehicles.filter(
+    (v) =>
+      v.name.toLowerCase().includes(searchQuery) ||
+      (v.plateNumber ?? "").toLowerCase().includes(searchQuery)
+  );
+
+  async function addVehicle(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    const name = newName.trim();
+    if (!name) return;
+    const res = await fetch("/api/vehicles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        plateNumber: newPlate.trim() || null,
+        type: newType.trim() || null,
+        capacity: newCapacity.trim() || null,
+        inspectionDate: newInspection ? parseLocalDate(newInspection).toISOString() : null,
+        insuranceDate: newInsurance ? parseLocalDate(newInsurance).toISOString() : null,
+      }),
+    });
+    if (!res.ok) {
+      setError("Nie udało się dodać pojazdu");
+      return;
+    }
+    setNewName("");
+    setNewPlate("");
+    setNewType("");
+    setNewCapacity("");
+    setNewInspection("");
+    setNewInsurance("");
+    await loadVehicles();
+  }
+
+  async function removeVehicle(id: string) {
+    const removed = vehicles.find((v) => v.id === id);
+    await fetch(`/api/vehicles/${id}`, { method: "DELETE" });
+    setVehicles((prev) => prev.filter((v) => v.id !== id));
+
+    if (removed) {
+      pushUndo({
+        label: `Usunięto pojazd „${removed.name}”`,
+        restore: async () => {
+          await fetch("/api/vehicles", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: removed.name,
+              plateNumber: removed.plateNumber,
+              type: removed.type,
+              capacity: removed.capacity,
+              inspectionDate: removed.inspectionDate,
+              insuranceDate: removed.insuranceDate,
+              note: removed.note,
+            }),
+          });
+          await loadVehicles();
+        },
+      });
+    }
+  }
+
+  async function updateVehicle(
+    id: string,
+    data: {
+      name: string;
+      plateNumber: string | null;
+      type: string | null;
+      capacity: string | null;
+      inspectionDate: string | null;
+      insuranceDate: string | null;
+      note: string | null;
+    }
+  ) {
+    const res = await fetch(`/api/vehicles/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) return false;
+    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, ...data } : v)));
+    return true;
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl px-6 py-10">
+      <h1 className="text-xl font-semibold text-foreground">Flota</h1>
+      <p className="mt-1 text-sm text-muted">
+        Dodawaj pojazdy i śledź terminy przeglądów oraz ubezpieczeń, żeby móc
+        przypisywać je do wydarzeń w grafiku.
+      </p>
+
+      <form
+        onSubmit={addVehicle}
+        className="mt-6 flex flex-wrap items-end gap-3 rounded-lg border border-border-subtle bg-surface p-4"
+      >
+        <div className="flex min-w-[180px] flex-1 flex-col gap-1">
+          <label className="text-xs text-muted">Nazwa</label>
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="np. Bus Ford Transit"
+            className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+        </div>
+        <div className="flex min-w-[120px] flex-col gap-1">
+          <label className="text-xs text-muted">Nr rejestracyjny</label>
+          <input
+            value={newPlate}
+            onChange={(e) => setNewPlate(e.target.value)}
+            className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+          />
+        </div>
+        <div className="flex min-w-[120px] flex-col gap-1">
+          <label className="text-xs text-muted">Typ (opcjonalnie)</label>
+          <input
+            value={newType}
+            onChange={(e) => setNewType(e.target.value)}
+            placeholder="np. bus, przyczepa"
+            className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+        </div>
+        <div className="flex min-w-[120px] flex-col gap-1">
+          <label className="text-xs text-muted">Ładowność (opcjonalnie)</label>
+          <input
+            value={newCapacity}
+            onChange={(e) => setNewCapacity(e.target.value)}
+            placeholder="np. 9 osób"
+            className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted">Przegląd do</label>
+          <input
+            type="date"
+            value={newInspection}
+            onChange={(e) => setNewInspection(e.target.value)}
+            className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted">Ubezpieczenie do</label>
+          <input
+            type="date"
+            value={newInsurance}
+            onChange={(e) => setNewInsurance(e.target.value)}
+            className="rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+          />
+        </div>
+        <button
+          type="submit"
+          className="rounded-md bg-accent px-4 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+        >
+          Dodaj pojazd
+        </button>
+      </form>
+      {error && <p className="mt-2 text-sm text-danger">{error}</p>}
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Szukaj po nazwie lub numerze rejestracyjnym…"
+        className="mt-4 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+      />
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        {loading && <p className="text-sm text-muted">Ładowanie…</p>}
+        {!loading && vehicles.length === 0 && (
+          <p className="text-sm text-muted">Brak pojazdów. Dodaj pierwszy powyżej.</p>
+        )}
+        {!loading && vehicles.length > 0 && filteredVehicles.length === 0 && (
+          <p className="text-sm text-muted">Brak pojazdów pasujących do wyszukiwania.</p>
+        )}
+        {filteredVehicles.map((vehicle) => (
+          <VehicleCard
+            key={vehicle.id}
+            vehicle={vehicle}
+            onRemove={() => removeVehicle(vehicle.id)}
+            onSave={(data) => updateVehicle(vehicle.id, data)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VehicleCard({
+  vehicle,
+  onRemove,
+  onSave,
+}: {
+  vehicle: Vehicle;
+  onRemove: () => void;
+  onSave: (data: {
+    name: string;
+    plateNumber: string | null;
+    type: string | null;
+    capacity: string | null;
+    inspectionDate: string | null;
+    insuranceDate: string | null;
+    note: string | null;
+  }) => Promise<boolean>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [nameInput, setNameInput] = useState(vehicle.name);
+  const [plateInput, setPlateInput] = useState(vehicle.plateNumber ?? "");
+  const [typeInput, setTypeInput] = useState(vehicle.type ?? "");
+  const [capacityInput, setCapacityInput] = useState(vehicle.capacity ?? "");
+  const [inspectionInput, setInspectionInput] = useState(
+    vehicle.inspectionDate ? format(new Date(vehicle.inspectionDate), "yyyy-MM-dd") : ""
+  );
+  const [insuranceInput, setInsuranceInput] = useState(
+    vehicle.insuranceDate ? format(new Date(vehicle.insuranceDate), "yyyy-MM-dd") : ""
+  );
+  const [noteInput, setNoteInput] = useState(vehicle.note ?? "");
+  const [saveError, setSaveError] = useState(false);
+
+  function startEditing() {
+    setNameInput(vehicle.name);
+    setPlateInput(vehicle.plateNumber ?? "");
+    setTypeInput(vehicle.type ?? "");
+    setCapacityInput(vehicle.capacity ?? "");
+    setInspectionInput(
+      vehicle.inspectionDate ? format(new Date(vehicle.inspectionDate), "yyyy-MM-dd") : ""
+    );
+    setInsuranceInput(
+      vehicle.insuranceDate ? format(new Date(vehicle.insuranceDate), "yyyy-MM-dd") : ""
+    );
+    setNoteInput(vehicle.note ?? "");
+    setSaveError(false);
+    setIsEditing(true);
+  }
+
+  async function submitDetails(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = nameInput.trim();
+    if (!trimmed) return;
+    const ok = await onSave({
+      name: trimmed,
+      plateNumber: plateInput.trim() || null,
+      type: typeInput.trim() || null,
+      capacity: capacityInput.trim() || null,
+      inspectionDate: inspectionInput ? parseLocalDate(inspectionInput).toISOString() : null,
+      insuranceDate: insuranceInput ? parseLocalDate(insuranceInput).toISOString() : null,
+      note: noteInput.trim() || null,
+    });
+    if (ok) {
+      setIsEditing(false);
+    } else {
+      setSaveError(true);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border-subtle bg-surface p-4">
+      {isEditing ? (
+        <form onSubmit={submitDetails} className="flex flex-col gap-2">
+          <input
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            placeholder="Nazwa"
+            autoFocus
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+          />
+          <input
+            value={plateInput}
+            onChange={(e) => setPlateInput(e.target.value)}
+            placeholder="Nr rejestracyjny"
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          <input
+            value={typeInput}
+            onChange={(e) => setTypeInput(e.target.value)}
+            placeholder="Typ"
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          <input
+            value={capacityInput}
+            onChange={(e) => setCapacityInput(e.target.value)}
+            placeholder="Ładowność"
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          <div className="flex gap-2">
+            <div className="flex flex-1 flex-col gap-1">
+              <label className="text-xs text-muted">Przegląd do</label>
+              <input
+                type="date"
+                value={inspectionInput}
+                onChange={(e) => setInspectionInput(e.target.value)}
+                className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-1 flex-col gap-1">
+              <label className="text-xs text-muted">Ubezpieczenie do</label>
+              <input
+                type="date"
+                value={insuranceInput}
+                onChange={(e) => setInsuranceInput(e.target.value)}
+                className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+              />
+            </div>
+          </div>
+          <input
+            value={noteInput}
+            onChange={(e) => setNoteInput(e.target.value)}
+            placeholder="Notatka"
+            className="w-full rounded-md border border-border-subtle bg-background px-2 py-1 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+          />
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              className="text-xs text-accent-hover transition hover:underline"
+            >
+              Zapisz
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="text-xs text-muted transition hover:text-foreground"
+            >
+              Anuluj
+            </button>
+          </div>
+        </form>
+      ) : (
+        <div className="flex items-start justify-between">
+          <div>
+            <span className="text-sm font-medium text-foreground">{vehicle.name}</span>
+            <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
+              {vehicle.plateNumber && <span>{vehicle.plateNumber}</span>}
+              {vehicle.type && <span>· {vehicle.type}</span>}
+              {vehicle.capacity && <span>· {vehicle.capacity}</span>}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <button
+              onClick={startEditing}
+              className="text-xs text-muted transition hover:text-accent-hover"
+            >
+              Edytuj
+            </button>
+            <button
+              onClick={onRemove}
+              className="text-xs text-muted transition hover:text-danger"
+            >
+              Usuń
+            </button>
+          </div>
+        </div>
+      )}
+      {saveError && (
+        <p className="mt-1 text-xs text-danger">Nie udało się zapisać zmiany.</p>
+      )}
+
+      {!isEditing && (vehicle.inspectionDate || vehicle.insuranceDate) && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <ExpiryBadge label="Przegląd" date={vehicle.inspectionDate} />
+          <ExpiryBadge label="Ubezpieczenie" date={vehicle.insuranceDate} />
+        </div>
+      )}
+      {!isEditing && vehicle.note && (
+        <p className="mt-2 text-xs text-muted">{vehicle.note}</p>
+      )}
+    </div>
+  );
+}

@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
+      vehicleAssignments: { include: { vehicle: true } },
     },
     // Historical searches ("to") read best most-recent-first; everything
     // else (weekly grid, upcoming search) reads chronologically forward.
@@ -79,7 +80,7 @@ export async function POST(req: NextRequest) {
             notes,
             ...loadingTransport,
           },
-          include: { assignments: true },
+          include: { assignments: true, vehicleAssignments: true },
         })
       )
     );
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
       notes,
       ...loadingTransport,
     },
-    include: { assignments: true },
+    include: { assignments: true, vehicleAssignments: true },
   });
   return NextResponse.json(event, { status: 201 });
 }

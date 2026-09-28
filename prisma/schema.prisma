@@ -75,6 +75,7 @@ model Event {
   transportVehicle  String?
   notes             String?
   assignments       Assignment[]
+  vehicleAssignments VehicleAssignment[]
 
   @@index([groupId])
   @@index([startsAt])
@@ -92,4 +93,27 @@ model Assignment {
   person    Person      @relation(fields: [personId], references: [id], onDelete: Cascade)
 
   @@unique([eventId, personId])
+}
+
+model Vehicle {
+  id             String              @id @default(cuid())
+  name           String
+  plateNumber    String?
+  type           String?
+  capacity       String?
+  inspectionDate DateTime?
+  insuranceDate  DateTime?
+  note           String?
+  createdAt      DateTime            @default(now())
+  assignments    VehicleAssignment[]
+}
+
+model VehicleAssignment {
+  id        String  @id @default(cuid())
+  eventId   String
+  vehicleId String
+  event     Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, vehicleId])
 }

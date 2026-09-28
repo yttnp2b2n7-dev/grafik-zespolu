@@ -43,6 +43,25 @@ export type Assignment = {
   person: Person;
 };
 
+export type Vehicle = {
+  id: string;
+  name: string;
+  plateNumber: string | null;
+  type: string | null;
+  capacity: string | null;
+  inspectionDate: string | null;
+  insuranceDate: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
+export type VehicleAssignment = {
+  id: string;
+  eventId: string;
+  vehicleId: string;
+  vehicle: Vehicle;
+};
+
 export type Event = {
   id: string;
   title: string;
@@ -57,4 +76,5 @@ export type Event = {
   transportVehicle: string | null;
   notes: string | null;
   assignments: Assignment[];
+  vehicleAssignments: VehicleAssignment[];
 };

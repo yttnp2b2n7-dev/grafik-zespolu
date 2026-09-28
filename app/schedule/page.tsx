@@ -21,8 +21,9 @@ import {
   subWeeks,
 } from "date-fns";
 import { pl } from "date-fns/locale";
-import type { Assignment, Event, Person } from "@/lib/types";
+import type { Assignment, Event, Person, Vehicle, VehicleAssignment } from "@/lib/types";
 import { PersonTile } from "./PersonTile";
+import { VehicleTile } from "./VehicleTile";
 import { EventCard } from "./EventCard";
 import { EventModal } from "./EventModal";
 import { useSession } from "../session-context";
@@ -135,12 +136,16 @@ export default function SchedulePage() {
   );
   const [dayViewDate, setDayViewDate] = useState(() => startOfDay(new Date()));
   const [people, setPeople] = useState<Person[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalDate, setModalDate] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [draggedPerson, setDraggedPerson] = useState<Person | null>(null);
+  const [draggedVehicle, setDraggedVehicle] = useState<Vehicle | null>(null);
+  const [sidebarTab, setSidebarTab] = useState<"ludzie" | "pojazdy">("ludzie");
   const [personSearch, setPersonSearch] = useState("");
+  const [vehicleSearch, setVehicleSearch] = useState("");
   const [peopleExpanded, setPeopleExpanded] = useState(false);
   const [eventSearch, setEventSearch] = useState("");
   const [historicalOnly, setHistoricalOnly] = useState(false);
@@ -152,6 +157,12 @@ export default function SchedulePage() {
   const [conflictConfirm, setConflictConfirm] = useState<{
     personId: string;
     personName: string;
+    eventId: string;
+    conflictTitle: string;
+  } | null>(null);
+  const [vehicleConflictConfirm, setVehicleConflictConfirm] = useState<{
+    vehicleId: string;
+    vehicleName: string;
     eventId: string;
     conflictTitle: string;
   } | null>(null);
@@ -186,6 +197,11 @@ export default function SchedulePage() {
     if (data) setPeople(data);
   }, []);
 
+  const loadVehicles = useCallback(async () => {
+    const data = await fetchJsonOrNull<Vehicle[]>("/api/vehicles");
+    if (data) setVehicles(data);
+  }, []);
+
   const loadEvents = useCallback(async () => {
     const versionAtStart = localVersionRef.current;
     const data = await fetchJsonOrNull<Event[]>(
@@ -216,6 +232,10 @@ export default function SchedulePage() {
   }, [isAdmin, loadPeople]);
 
   useEffect(() => {
+    if (isAdmin) loadVehicles();
+  }, [isAdmin, loadVehicles]);
+
+  useEffect(() => {
     setLoading(true);
     loadEvents().finally(() => setLoading(false));
   }, [loadEvents]);
@@ -226,7 +246,10 @@ export default function SchedulePage() {
 
   usePolling(() => {
     if (isDraggingRef.current) return;
-    if (isAdmin) loadPeople();
+    if (isAdmin) {
+      loadPeople();
+      loadVehicles();
+    }
     loadEvents();
   }, 15000);
 
@@ -248,8 +271,12 @@ export default function SchedulePage() {
 
   function handleDragStart(e: DragStartEvent) {
     isDraggingRef.current = true;
-    const person = e.active.data.current?.person as Person | undefined;
-    setDraggedPerson(person ?? null);
+    const data = e.active.data.current;
+    if (data?.type === "vehicle" || data?.type === "vehicleAssignment") {
+      setDraggedVehicle((data.vehicle as Vehicle) ?? null);
+    } else {
+      setDraggedPerson((data?.person as Person) ?? null);
+    }
   }
 
   // Finds another event on the same calendar day as `eventId` that already
@@ -265,6 +292,22 @@ export default function SchedulePage() {
           ev.id !== eventId &&
           isSameDay(new Date(ev.startsAt), targetDay) &&
           ev.assignments.some((a) => a.personId === personId)
+      ) ?? null
+    );
+  }
+
+  // Same idea as `findSameDayConflict`, but for a vehicle already booked on
+  // another event the same day - also a warning, not a hard block.
+  function findSameDayVehicleConflict(vehicleId: string, eventId: string): Event | null {
+    const target = events.find((ev) => ev.id === eventId);
+    if (!target) return null;
+    const targetDay = new Date(target.startsAt);
+    return (
+      events.find(
+        (ev) =>
+          ev.id !== eventId &&
+          isSameDay(new Date(ev.startsAt), targetDay) &&
+          ev.vehicleAssignments.some((a) => a.vehicleId === vehicleId)
       ) ?? null
     );
   }
@@ -319,15 +362,45 @@ export default function SchedulePage() {
   async function handleDragEnd(e: DragEndEvent) {
     isDraggingRef.current = false;
     setDraggedPerson(null);
+    setDraggedVehicle(null);
     const { active, over } = e;
     if (!over) return;
 
     const activeData = active.data.current;
+    const eventId = over.data.current?.eventId as string | undefined;
+    if (!eventId) return;
+
+    if (activeData?.type === "vehicle" || activeData?.type === "vehicleAssignment") {
+      const draggedVehicleData = activeData?.vehicle as Vehicle | undefined;
+      const vehicleId = draggedVehicleData?.id;
+      const vehicleName = draggedVehicleData?.name;
+      if (!vehicleId) return;
+
+      const sourceEventId = activeData?.sourceEventId as string | undefined;
+      const sourceAssignmentId = activeData?.assignmentId as string | undefined;
+      if (sourceEventId && sourceEventId === eventId) return;
+
+      if (!sourceEventId) {
+        const conflict = findSameDayVehicleConflict(vehicleId, eventId);
+        if (conflict) {
+          setVehicleConflictConfirm({
+            vehicleId,
+            vehicleName: vehicleName ?? "Ten pojazd",
+            eventId,
+            conflictTitle: conflict.title,
+          });
+          return;
+        }
+      }
+
+      await assignVehicleToEvent({ vehicleId, eventId, sourceEventId, sourceAssignmentId });
+      return;
+    }
+
     const draggedPersonData = activeData?.person as Person | undefined;
     const personId = draggedPersonData?.id;
     const personName = draggedPersonData?.name;
-    const eventId = over.data.current?.eventId as string | undefined;
-    if (!personId || !eventId) return;
+    if (!personId) return;
 
     const sourceEventId = activeData?.sourceEventId as string | undefined;
     const sourceAssignmentId = activeData?.assignmentId as string | undefined;
@@ -380,6 +453,98 @@ export default function SchedulePage() {
 
   function cancelConflictAssign() {
     setConflictConfirm(null);
+  }
+
+  async function assignVehicleToEvent({
+    vehicleId,
+    eventId,
+    sourceEventId,
+    sourceAssignmentId,
+  }: {
+    vehicleId: string;
+    eventId: string;
+    sourceEventId?: string;
+    sourceAssignmentId?: string;
+  }) {
+    const res = await fetch("/api/vehicle-assignments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId, vehicleId }),
+    });
+    if (!res.ok) return;
+    const assignment: VehicleAssignment = await res.json();
+
+    if (sourceEventId && sourceAssignmentId) {
+      await fetch(`/api/vehicle-assignments/${sourceAssignmentId}`, {
+        method: "DELETE",
+      });
+    }
+
+    localVersionRef.current += 1;
+    setEvents((prev) =>
+      prev.map((ev) => {
+        if (ev.id === sourceEventId) {
+          return {
+            ...ev,
+            vehicleAssignments: ev.vehicleAssignments.filter(
+              (a) => a.id !== sourceAssignmentId
+            ),
+          };
+        }
+        if (ev.id === eventId) {
+          const withNew = ev.vehicleAssignments.some((a) => a.id === assignment.id)
+            ? ev.vehicleAssignments
+            : [...ev.vehicleAssignments, assignment];
+          return { ...ev, vehicleAssignments: withNew };
+        }
+        return ev;
+      })
+    );
+  }
+
+  async function confirmVehicleConflictAssign() {
+    if (!vehicleConflictConfirm) return;
+    const { vehicleId, eventId } = vehicleConflictConfirm;
+    setVehicleConflictConfirm(null);
+    await assignVehicleToEvent({ vehicleId, eventId });
+  }
+
+  function cancelVehicleConflictAssign() {
+    setVehicleConflictConfirm(null);
+  }
+
+  async function removeVehicleAssignment(assignmentId: string) {
+    let removed: { eventId: string; vehicleId: string; vehicleName: string } | null = null;
+    for (const ev of events) {
+      const a = ev.vehicleAssignments.find((a) => a.id === assignmentId);
+      if (a) {
+        removed = { eventId: ev.id, vehicleId: a.vehicleId, vehicleName: a.vehicle.name };
+        break;
+      }
+    }
+
+    localVersionRef.current += 1;
+    setEvents((prev) =>
+      prev.map((ev) => ({
+        ...ev,
+        vehicleAssignments: ev.vehicleAssignments.filter((a) => a.id !== assignmentId),
+      }))
+    );
+    await fetch(`/api/vehicle-assignments/${assignmentId}`, { method: "DELETE" });
+
+    if (removed) {
+      pushUndo({
+        label: `Usunięto ${removed.vehicleName} z wydarzenia`,
+        restore: async () => {
+          await fetch("/api/vehicle-assignments", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: removed.eventId, vehicleId: removed.vehicleId }),
+          });
+          await loadEvents();
+        },
+      });
+    }
   }
 
   async function copyCrewFromPreviousDay(eventId: string) {
@@ -602,6 +767,13 @@ export default function SchedulePage() {
               });
             }
           }
+          for (const a of removed.vehicleAssignments) {
+            await fetch("/api/vehicle-assignments", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ eventId: newEvent.id, vehicleId: a.vehicleId }),
+            });
+          }
           await loadEvents();
         },
       });
@@ -677,6 +849,11 @@ export default function SchedulePage() {
   const visiblePeople = peopleExpanded
     ? filteredPeople
     : filteredPeople.slice(0, PEOPLE_COLLAPSED_LIMIT);
+
+  const vehicleSearchQuery = vehicleSearch.trim().toLowerCase();
+  const filteredVehicles = vehicles.filter((vehicle) =>
+    vehicle.name.toLowerCase().includes(vehicleSearchQuery)
+  );
 
   const eventSearchQuery = eventSearch.trim().toLowerCase();
   const searchSource = historicalOnly ? historicalEvents : upcomingEvents;
@@ -755,6 +932,7 @@ export default function SchedulePage() {
                 <EventCard
                   event={event}
                   onRemoveAssignment={removeAssignment}
+                  onRemoveVehicleAssignment={removeVehicleAssignment}
                   onToggleLead={toggleLead}
                   onToggleRole={toggleAssignmentRole}
                   onToggleWorkType={toggleAssignmentWorkType}
@@ -889,53 +1067,101 @@ export default function SchedulePage() {
         >
           {isAdmin && (
             <aside className="h-max max-h-[calc(100vh-3rem)] overflow-y-auto rounded-lg border border-border-subtle bg-surface/50 p-3 lg:sticky lg:top-6">
-              <p className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
-                Ludzie
-              </p>
-              {freeDayFilter !== null && (
-                <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-accent/10 px-2 py-1 text-[11px] text-accent">
-                  <span className="capitalize">
-                    Wolni: {format(freeDayFilter, "EEEE d MMM", { locale: pl })}
-                  </span>
-                  <button
-                    onClick={() => setFreeDayFilter(null)}
-                    aria-label="Wyczyść filtr wolnych osób"
-                    className="shrink-0 text-accent transition hover:text-accent-hover"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-              <input
-                value={personSearch}
-                onChange={(e) => setPersonSearch(e.target.value)}
-                placeholder="Szukaj po imieniu lub umiejętności…"
-                className="mb-2 w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
-              />
-              <div className="flex flex-col gap-1.5">
-                {visiblePeople.map((person) => (
-                  <PersonTile key={person.id} person={person} />
-                ))}
-                {people.length === 0 && (
-                  <p className="px-1 text-xs text-muted">
-                    Dodaj osoby w zakładce „Ludzie”.
-                  </p>
-                )}
-                {people.length > 0 && filteredPeople.length === 0 && (
-                  <p className="px-1 text-xs text-muted">
-                    Brak osób pasujących do wyszukiwania.
-                  </p>
-                )}
-              </div>
-              {filteredPeople.length > PEOPLE_COLLAPSED_LIMIT && (
+              <div className="mb-2 flex rounded-md border border-border-subtle p-0.5">
                 <button
-                  onClick={() => setPeopleExpanded((prev) => !prev)}
-                  className="mt-2 w-full rounded-md border border-border-subtle px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-foreground"
+                  onClick={() => setSidebarTab("ludzie")}
+                  className={`flex-1 rounded px-2 py-1 text-xs font-medium transition ${
+                    sidebarTab === "ludzie"
+                      ? "bg-accent text-white"
+                      : "text-muted hover:text-foreground"
+                  }`}
                 >
-                  {peopleExpanded
-                    ? "Zwiń listę"
-                    : `Pokaż więcej (${filteredPeople.length - PEOPLE_COLLAPSED_LIMIT})`}
+                  Ludzie
                 </button>
+                <button
+                  onClick={() => setSidebarTab("pojazdy")}
+                  className={`flex-1 rounded px-2 py-1 text-xs font-medium transition ${
+                    sidebarTab === "pojazdy"
+                      ? "bg-accent text-white"
+                      : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  Pojazdy
+                </button>
+              </div>
+
+              {sidebarTab === "ludzie" ? (
+                <>
+                  {freeDayFilter !== null && (
+                    <div className="mb-2 flex items-center justify-between gap-2 rounded-md bg-accent/10 px-2 py-1 text-[11px] text-accent">
+                      <span className="capitalize">
+                        Wolni: {format(freeDayFilter, "EEEE d MMM", { locale: pl })}
+                      </span>
+                      <button
+                        onClick={() => setFreeDayFilter(null)}
+                        aria-label="Wyczyść filtr wolnych osób"
+                        className="shrink-0 text-accent transition hover:text-accent-hover"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    value={personSearch}
+                    onChange={(e) => setPersonSearch(e.target.value)}
+                    placeholder="Szukaj po imieniu lub umiejętności…"
+                    className="mb-2 w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    {visiblePeople.map((person) => (
+                      <PersonTile key={person.id} person={person} />
+                    ))}
+                    {people.length === 0 && (
+                      <p className="px-1 text-xs text-muted">
+                        Dodaj osoby w zakładce „Ludzie”.
+                      </p>
+                    )}
+                    {people.length > 0 && filteredPeople.length === 0 && (
+                      <p className="px-1 text-xs text-muted">
+                        Brak osób pasujących do wyszukiwania.
+                      </p>
+                    )}
+                  </div>
+                  {filteredPeople.length > PEOPLE_COLLAPSED_LIMIT && (
+                    <button
+                      onClick={() => setPeopleExpanded((prev) => !prev)}
+                      className="mt-2 w-full rounded-md border border-border-subtle px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-foreground"
+                    >
+                      {peopleExpanded
+                        ? "Zwiń listę"
+                        : `Pokaż więcej (${filteredPeople.length - PEOPLE_COLLAPSED_LIMIT})`}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <input
+                    value={vehicleSearch}
+                    onChange={(e) => setVehicleSearch(e.target.value)}
+                    placeholder="Szukaj po nazwie…"
+                    className="mb-2 w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+                  />
+                  <div className="flex flex-col gap-1.5">
+                    {filteredVehicles.map((vehicle) => (
+                      <VehicleTile key={vehicle.id} vehicle={vehicle} />
+                    ))}
+                    {vehicles.length === 0 && (
+                      <p className="px-1 text-xs text-muted">
+                        Dodaj pojazdy w zakładce „Flota”.
+                      </p>
+                    )}
+                    {vehicles.length > 0 && filteredVehicles.length === 0 && (
+                      <p className="px-1 text-xs text-muted">
+                        Brak pojazdów pasujących do wyszukiwania.
+                      </p>
+                    )}
+                  </div>
+                </>
               )}
             </aside>
           )}
@@ -1024,6 +1250,7 @@ export default function SchedulePage() {
                       <EventCard
                         event={event}
                         onRemoveAssignment={removeAssignment}
+                  onRemoveVehicleAssignment={removeVehicleAssignment}
                         onToggleLead={toggleLead}
                         onToggleRole={toggleAssignmentRole}
                         onToggleWorkType={toggleAssignmentWorkType}
@@ -1061,6 +1288,7 @@ export default function SchedulePage() {
                     <EventCard
                       event={ev}
                       onRemoveAssignment={removeAssignment}
+                  onRemoveVehicleAssignment={removeVehicleAssignment}
                       onToggleLead={toggleLead}
                       onToggleRole={toggleAssignmentRole}
                       onToggleWorkType={toggleAssignmentWorkType}
@@ -1102,6 +1330,7 @@ export default function SchedulePage() {
                     <EventCard
                       event={ev}
                       onRemoveAssignment={removeAssignment}
+                  onRemoveVehicleAssignment={removeVehicleAssignment}
                       onToggleLead={toggleLead}
                       onToggleRole={toggleAssignmentRole}
                       onToggleWorkType={toggleAssignmentWorkType}
@@ -1142,7 +1371,11 @@ export default function SchedulePage() {
       </div>
 
       <DragOverlay>
-        {draggedPerson ? <PersonTile person={draggedPerson} dragging /> : null}
+        {draggedPerson ? (
+          <PersonTile person={draggedPerson} dragging />
+        ) : draggedVehicle ? (
+          <VehicleTile vehicle={draggedVehicle} dragging />
+        ) : null}
       </DragOverlay>
 
       {isAdmin && modalDate && (
@@ -1180,6 +1413,34 @@ export default function SchedulePage() {
               </button>
               <button
                 onClick={confirmConflictAssign}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+              >
+                Potwierdź
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {vehicleConflictConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-foreground">Uwaga!</h3>
+            <p className="mt-2 text-sm text-muted">
+              Ten pojazd ({vehicleConflictConfirm.vehicleName}) jest już
+              przypisany do wydarzenia „{vehicleConflictConfirm.conflictTitle}”
+              tego samego dnia. Czy jesteś pewien, że chcesz go dopisać do
+              kolejnego?
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={cancelVehicleConflictAssign}
+                className="rounded-md border border-border-subtle px-3 py-1.5 text-sm text-muted transition hover:border-accent hover:text-foreground"
+              >
+                Odrzuć
+              </button>
+              <button
+                onClick={confirmVehicleConflictAssign}
                 className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
               >
                 Potwierdź

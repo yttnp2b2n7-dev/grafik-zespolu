@@ -7,6 +7,7 @@ import { pl } from "date-fns/locale";
 import Link from "next/link";
 import type { Event } from "@/lib/types";
 import { AssignmentChip } from "./AssignmentChip";
+import { VehicleAssignmentChip } from "./VehicleAssignmentChip";
 import { EventDetailsModal } from "./EventDetailsModal";
 import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
 import {
@@ -21,6 +22,7 @@ import type { WorkType } from "@/lib/workType";
 export function EventCard({
   event,
   onRemoveAssignment,
+  onRemoveVehicleAssignment,
   onToggleLead,
   onToggleRole,
   onToggleWorkType,
@@ -31,6 +33,7 @@ export function EventCard({
 }: {
   event: Event;
   onRemoveAssignment: (assignmentId: string) => void;
+  onRemoveVehicleAssignment: (assignmentId: string) => void;
   onToggleLead?: (assignmentId: string, isLead: boolean) => void;
   onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
   onToggleWorkType?: (assignmentId: string, type: WorkType, checked: boolean) => void;
@@ -140,9 +143,18 @@ export function EventCard({
             readOnly={readOnly}
           />
         ))}
-        {event.assignments.length === 0 && (
+        {event.vehicleAssignments.map((a) => (
+          <VehicleAssignmentChip
+            key={a.id}
+            assignment={a}
+            eventId={event.id}
+            onRemove={() => onRemoveVehicleAssignment(a.id)}
+            readOnly={readOnly}
+          />
+        ))}
+        {event.assignments.length === 0 && event.vehicleAssignments.length === 0 && (
           <span className="text-xs text-muted/50">
-            {readOnly ? "Brak przypisanych osób" : "Przeciągnij tu osobę…"}
+            {readOnly ? "Brak przypisanych osób" : "Przeciągnij tu osobę lub pojazd…"}
           </span>
         )}
       </div>

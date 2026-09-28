@@ -17,6 +17,7 @@ export async function GET(
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
+      vehicleAssignments: { include: { vehicle: true } },
     },
   });
 
@@ -107,6 +108,7 @@ export async function PATCH(
               assignments: {
                 include: { person: { include: { skills: { include: { skill: true } } } } },
               },
+              vehicleAssignments: { include: { vehicle: true } },
             },
           });
         }
@@ -120,6 +122,7 @@ export async function PATCH(
               assignments: {
                 include: { person: { include: { skills: { include: { skill: true } } } } },
               },
+              vehicleAssignments: { include: { vehicle: true } },
             },
           });
         }
@@ -138,6 +141,7 @@ export async function PATCH(
             assignments: {
               include: { person: { include: { skills: { include: { skill: true } } } } },
             },
+            vehicleAssignments: { include: { vehicle: true } },
           },
         });
       }),
@@ -175,6 +179,7 @@ export async function PATCH(
       assignments: {
         include: { person: { include: { skills: { include: { skill: true } } } } },
       },
+      vehicleAssignments: { include: { vehicle: true } },
     },
   });
   return NextResponse.json({
