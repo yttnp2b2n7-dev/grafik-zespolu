@@ -106,6 +106,18 @@ model Vehicle {
   note           String?
   createdAt      DateTime            @default(now())
   assignments    VehicleAssignment[]
+  serviceBlocks  VehicleService[]
+}
+
+model VehicleService {
+  id        String   @id @default(cuid())
+  vehicleId String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
 }
 
 model VehicleAssignment {

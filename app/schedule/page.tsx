@@ -48,6 +48,7 @@ import {
 } from "@/lib/workType";
 import { parseLocalDate } from "@/lib/localDate";
 import { isPersonOnVacationOn } from "@/lib/vacation";
+import { isVehicleInServiceOn } from "@/lib/vehicleInService";
 import { usePolling } from "@/lib/usePolling";
 
 const DAY_LABELS = [
@@ -168,6 +169,11 @@ export default function SchedulePage() {
   } | null>(null);
   const [vacationBlock, setVacationBlock] = useState<{
     personName: string;
+    startDate: string;
+    endDate: string;
+  } | null>(null);
+  const [vehicleServiceBlock, setVehicleServiceBlock] = useState<{
+    vehicleName: string;
     startDate: string;
     endDate: string;
   } | null>(null);
@@ -381,6 +387,20 @@ export default function SchedulePage() {
       if (sourceEventId && sourceEventId === eventId) return;
 
       if (!sourceEventId) {
+        const targetEvent = events.find((ev) => ev.id === eventId);
+        const service =
+          targetEvent && draggedVehicleData
+            ? isVehicleInServiceOn(draggedVehicleData, new Date(targetEvent.startsAt))
+            : null;
+        if (service) {
+          setVehicleServiceBlock({
+            vehicleName: vehicleName ?? "Ten pojazd",
+            startDate: service.startDate,
+            endDate: service.endDate,
+          });
+          return;
+        }
+
         const conflict = findSameDayVehicleConflict(vehicleId, eventId);
         if (conflict) {
           setVehicleConflictConfirm({
@@ -442,6 +462,10 @@ export default function SchedulePage() {
 
   function closeVacationBlock() {
     setVacationBlock(null);
+  }
+
+  function closeVehicleServiceBlock() {
+    setVehicleServiceBlock(null);
   }
 
   async function confirmConflictAssign() {
@@ -1464,6 +1488,30 @@ export default function SchedulePage() {
             <div className="mt-4 flex justify-end">
               <button
                 onClick={closeVacationBlock}
+                className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {vehicleServiceBlock && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 px-4">
+          <div className="w-full max-w-sm rounded-lg border border-border-subtle bg-surface p-5 shadow-xl">
+            <h3 className="text-sm font-semibold text-foreground">Uwaga!</h3>
+            <p className="mt-2 text-sm text-muted">
+              Ten pojazd ({vehicleServiceBlock.vehicleName}) jest w serwisie w
+              tym dniu (
+              {format(new Date(vehicleServiceBlock.startDate), "d MMM", { locale: pl })}
+              {" – "}
+              {format(new Date(vehicleServiceBlock.endDate), "d MMM yyyy", { locale: pl })}
+              ). Nie można go przypisać do wydarzenia.
+            </p>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={closeVehicleServiceBlock}
                 className="rounded-md bg-accent px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-hover"
               >
                 OK

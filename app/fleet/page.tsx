@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
-import type { Vehicle } from "@/lib/types";
+import type { Vehicle, VehicleService } from "@/lib/types";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import { parseLocalDate } from "@/lib/localDate";
 import { useUndo } from "@/lib/undo-context";
@@ -144,6 +144,37 @@ export default function FleetPage() {
     return true;
   }
 
+  async function sendToService(vehicleId: string, startDate: string, endDate: string) {
+    const res = await fetch("/api/vehicle-service", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        vehicleId,
+        startDate: parseLocalDate(startDate).toISOString(),
+        endDate: parseLocalDate(endDate).toISOString(),
+      }),
+    });
+    if (!res.ok) return false;
+    const block: VehicleService = await res.json();
+    setVehicles((prev) =>
+      prev.map((v) =>
+        v.id === vehicleId ? { ...v, serviceBlocks: [...v.serviceBlocks, block] } : v
+      )
+    );
+    return true;
+  }
+
+  async function cancelService(vehicleId: string, blockId: string) {
+    setVehicles((prev) =>
+      prev.map((v) =>
+        v.id === vehicleId
+          ? { ...v, serviceBlocks: v.serviceBlocks.filter((b) => b.id !== blockId) }
+          : v
+      )
+    );
+    await fetch(`/api/vehicle-service/${blockId}`, { method: "DELETE" });
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="text-xl font-semibold text-foreground">Flota</h1>
@@ -239,6 +270,10 @@ export default function FleetPage() {
             vehicle={vehicle}
             onRemove={() => removeVehicle(vehicle.id)}
             onSave={(data) => updateVehicle(vehicle.id, data)}
+            onSendToService={(startDate, endDate) =>
+              sendToService(vehicle.id, startDate, endDate)
+            }
+            onCancelService={(blockId) => cancelService(vehicle.id, blockId)}
           />
         ))}
       </div>
@@ -246,10 +281,43 @@ export default function FleetPage() {
   );
 }
 
+function ServiceBadge({
+  block,
+  onCancel,
+}: {
+  block: VehicleService;
+  onCancel: () => void;
+}) {
+  const active =
+    startOfDay(new Date()).getTime() >= startOfDay(new Date(block.startDate)).getTime() &&
+    startOfDay(new Date()).getTime() <= startOfDay(new Date(block.endDate)).getTime();
+
+  return (
+    <span
+      className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs ${
+        active ? "bg-danger/15 text-danger" : "bg-background text-muted"
+      }`}
+    >
+      {active ? "W serwisie" : "Zaplanowany serwis"}:{" "}
+      {format(new Date(block.startDate), "d MMM", { locale: pl })} –{" "}
+      {format(new Date(block.endDate), "d MMM yyyy", { locale: pl })}
+      <button
+        onClick={onCancel}
+        className="flex h-3.5 w-3.5 items-center justify-center rounded-full text-current/70 hover:bg-black/10"
+        aria-label="Anuluj serwis"
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
 function VehicleCard({
   vehicle,
   onRemove,
   onSave,
+  onSendToService,
+  onCancelService,
 }: {
   vehicle: Vehicle;
   onRemove: () => void;
@@ -262,8 +330,14 @@ function VehicleCard({
     insuranceDate: string | null;
     note: string | null;
   }) => Promise<boolean>;
+  onSendToService: (startDate: string, endDate: string) => Promise<boolean>;
+  onCancelService: (blockId: string) => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSendingToService, setIsSendingToService] = useState(false);
+  const [serviceStart, setServiceStart] = useState("");
+  const [serviceEnd, setServiceEnd] = useState("");
+  const [serviceError, setServiceError] = useState<string | null>(null);
   const [nameInput, setNameInput] = useState(vehicle.name);
   const [plateInput, setPlateInput] = useState(vehicle.plateNumber ?? "");
   const [typeInput, setTypeInput] = useState(vehicle.type ?? "");
@@ -310,6 +384,24 @@ function VehicleCard({
       setIsEditing(false);
     } else {
       setSaveError(true);
+    }
+  }
+
+  async function submitService(e: React.FormEvent) {
+    e.preventDefault();
+    setServiceError(null);
+    if (!serviceStart || !serviceEnd) return;
+    if (parseLocalDate(serviceEnd) < parseLocalDate(serviceStart)) {
+      setServiceError("Data „do” nie może być wcześniejsza niż data „od”.");
+      return;
+    }
+    const ok = await onSendToService(serviceStart, serviceEnd);
+    if (ok) {
+      setServiceStart("");
+      setServiceEnd("");
+      setIsSendingToService(false);
+    } else {
+      setServiceError("Nie udało się zablokować pojazdu.");
     }
   }
 
@@ -396,6 +488,12 @@ function VehicleCard({
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <button
+              onClick={() => setIsSendingToService((prev) => !prev)}
+              className="text-xs text-muted transition hover:text-accent-hover"
+            >
+              Wyślij na serwis
+            </button>
+            <button
               onClick={startEditing}
               className="text-xs text-muted transition hover:text-accent-hover"
             >
@@ -414,10 +512,68 @@ function VehicleCard({
         <p className="mt-1 text-xs text-danger">Nie udało się zapisać zmiany.</p>
       )}
 
+      {!isEditing && isSendingToService && (
+        <form
+          onSubmit={submitService}
+          className="mt-3 flex flex-wrap items-end gap-2 rounded-md border border-border-subtle bg-background p-2.5"
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">Od</label>
+            <input
+              type="date"
+              value={serviceStart}
+              onChange={(e) => setServiceStart(e.target.value)}
+              required
+              className="rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-muted">Do</label>
+            <input
+              type="date"
+              value={serviceEnd}
+              onChange={(e) => setServiceEnd(e.target.value)}
+              required
+              className="rounded-md border border-border-subtle bg-surface px-2 py-1 text-sm text-foreground focus:border-accent focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            className="rounded-md bg-accent px-3 py-1 text-xs font-medium text-white transition hover:bg-accent-hover"
+          >
+            Zablokuj
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setIsSendingToService(false);
+              setServiceError(null);
+            }}
+            className="text-xs text-muted transition hover:text-foreground"
+          >
+            Anuluj
+          </button>
+          {serviceError && (
+            <p className="w-full text-xs text-danger">{serviceError}</p>
+          )}
+        </form>
+      )}
+
       {!isEditing && (vehicle.inspectionDate || vehicle.insuranceDate) && (
         <div className="mt-3 flex flex-wrap gap-1.5">
           <ExpiryBadge label="Przegląd" date={vehicle.inspectionDate} />
           <ExpiryBadge label="Ubezpieczenie" date={vehicle.insuranceDate} />
+        </div>
+      )}
+      {!isEditing && vehicle.serviceBlocks.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {vehicle.serviceBlocks.map((block) => (
+            <ServiceBadge
+              key={block.id}
+              block={block}
+              onCancel={() => onCancelService(block.id)}
+            />
+          ))}
         </div>
       )}
       {!isEditing && vehicle.note && (

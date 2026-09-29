@@ -43,6 +43,14 @@ export type Assignment = {
   person: Person;
 };
 
+export type VehicleService = {
+  id: string;
+  vehicleId: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+};
+
 export type Vehicle = {
   id: string;
   name: string;
@@ -53,6 +61,7 @@ export type Vehicle = {
   insuranceDate: string | null;
   note: string | null;
   createdAt: string;
+  serviceBlocks: VehicleService[];
 };
 
 export type VehicleAssignment = {
