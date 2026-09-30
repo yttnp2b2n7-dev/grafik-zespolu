@@ -9,6 +9,7 @@ import type { Event } from "@/lib/types";
 import { AssignmentChip } from "./AssignmentChip";
 import { VehicleAssignmentChip } from "./VehicleAssignmentChip";
 import { EventDetailsModal } from "./EventDetailsModal";
+import { EventSmsFlow } from "./EventSmsFlow";
 import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
 import {
   EVENT_TYPE_COLORS,
@@ -98,12 +99,22 @@ export function EventCard({
               ))}
             </div>
           )}
-          <p
-            className="truncate text-sm font-medium text-foreground"
-            title={event.title}
-          >
-            {event.title}
-          </p>
+          {readOnly ? (
+            <p
+              className="truncate text-sm font-medium text-foreground"
+              title={event.title}
+            >
+              {event.title}
+            </p>
+          ) : (
+            <Link
+              href={`/schedule/${event.id}`}
+              className="block truncate text-sm font-medium text-foreground transition hover:font-bold"
+              title={event.title}
+            >
+              {event.title}
+            </Link>
+          )}
           <p className="text-xs text-muted">{timeLabel}</p>
           {(event.loadingEnabled || event.transportEnabled) && (
             <p className="mt-0.5 text-xs text-muted/80">
@@ -160,14 +171,25 @@ export function EventCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted/70">
-        <button
-          onClick={() => setShowDetails(true)}
-          className="underline-offset-2 transition hover:text-accent-hover hover:underline"
-        >
-          Szczegóły
-        </button>
-        {!readOnly && (
+        {readOnly ? (
+          <button
+            onClick={() => setShowDetails(true)}
+            className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+          >
+            Szczegóły
+          </button>
+        ) : (
           <>
+            <EventSmsFlow event={event}>
+              {({ openChoice }) => (
+                <button
+                  onClick={openChoice}
+                  className="underline-offset-2 transition hover:text-accent-hover hover:underline"
+                >
+                  SMS
+                </button>
+              )}
+            </EventSmsFlow>
             <span>·</span>
             <button
               onClick={onEdit}
@@ -197,7 +219,7 @@ export function EventCard({
         )}
       </div>
 
-      {showDetails && (
+      {readOnly && showDetails && (
         <EventDetailsModal
           event={event}
           onClose={() => setShowDetails(false)}

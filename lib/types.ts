@@ -71,6 +71,17 @@ export type VehicleAssignment = {
   vehicle: Vehicle;
 };
 
+export type EventTask = {
+  id: string;
+  eventId: string;
+  text: string;
+  done: boolean;
+  assigneeId: string | null;
+  assignee: { id: string; name: string } | null;
+  dueDate: string | null;
+  createdAt: string;
+};
+
 export type Event = {
   id: string;
   title: string;
@@ -85,6 +96,8 @@ export type Event = {
   transportVehicleId: string | null;
   transportVehicle: Vehicle | null;
   notes: string | null;
+  managerNote: string | null;
   assignments: Assignment[];
   vehicleAssignments: VehicleAssignment[];
+  tasks: EventTask[];
 };

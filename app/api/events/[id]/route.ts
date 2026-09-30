@@ -19,6 +19,7 @@ export async function GET(
       },
       vehicleAssignments: { include: { vehicle: true } },
       transportVehicle: true,
+      tasks: { include: { assignee: true }, orderBy: { createdAt: "asc" } },
     },
   });
 
