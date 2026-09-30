@@ -42,6 +42,10 @@ next-env.d.ts
 
 # claude code runtime files
 .claude/*.lock
+.claude/settings.local.json
 
 # local database backups (contain real people's data - never commit)
 /backups/
+
+# personal notes, kept out of the repo on purpose
+/TODO.md
