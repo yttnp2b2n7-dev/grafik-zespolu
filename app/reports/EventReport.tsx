@@ -30,7 +30,7 @@ export function EventReport({ event }: { event: Event }) {
               )}
               {event.loadingEnabled && event.transportEnabled && " · "}
               {event.transportEnabled && (
-                <span>Transport: {event.transportVehicle || "-"}</span>
+                <span>Transport: {event.transportVehicle?.name || "-"}</span>
               )}
             </p>
           )}

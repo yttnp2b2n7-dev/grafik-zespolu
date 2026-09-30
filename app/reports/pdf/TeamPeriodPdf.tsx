@@ -66,7 +66,7 @@ export function TeamPeriodPdf({
                   `Załadunek: ${event.loadingTime || "-"}`}
                 {event.loadingEnabled && event.transportEnabled && "  ·  "}
                 {event.transportEnabled &&
-                  `Transport: ${event.transportVehicle || "-"}`}
+                  `Transport: ${event.transportVehicle?.name || "-"}`}
               </Text>
             )}
           </View>

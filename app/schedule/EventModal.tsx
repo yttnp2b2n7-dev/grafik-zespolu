@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { eachDayOfInterval, format } from "date-fns";
 import { pl } from "date-fns/locale";
-import type { Event } from "@/lib/types";
+import type { Event, Vehicle } from "@/lib/types";
 import {
   EVENT_TYPE_COLORS,
   EVENT_TYPE_LABELS,
@@ -17,11 +17,13 @@ type DayTime = { start: string; end: string };
 export function EventModal({
   defaultDate,
   event,
+  vehicles,
   onClose,
   onSubmit,
 }: {
   defaultDate: string;
   event?: Event;
+  vehicles: Vehicle[];
   onClose: () => void;
   onSubmit: (data: {
     title: string;
@@ -33,7 +35,7 @@ export function EventModal({
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
-    transportVehicle: string | null;
+    transportVehicleId: string | null;
   }) => Promise<void>;
 }) {
   const initialStart = event ? new Date(event.startsAt) : null;
@@ -57,8 +59,8 @@ export function EventModal({
   const [transportEnabled, setTransportEnabled] = useState(
     event?.transportEnabled ?? false
   );
-  const [transportVehicle, setTransportVehicle] = useState(
-    event?.transportVehicle ?? ""
+  const [transportVehicleId, setTransportVehicleId] = useState(
+    event?.transportVehicleId ?? ""
   );
   const [startDate, setStartDate] = useState(
     initialStart ? format(initialStart, "yyyy-MM-dd") : defaultDate
@@ -150,9 +152,7 @@ export function EventModal({
           loadingEnabled,
           loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
           transportEnabled,
-          transportVehicle: transportEnabled
-            ? transportVehicle.trim() || null
-            : null,
+          transportVehicleId: transportEnabled ? transportVehicleId || null : null,
         });
         onClose();
       } finally {
@@ -179,9 +179,7 @@ export function EventModal({
         loadingEnabled,
         loadingTime: loadingEnabled ? loadingTime.trim() || null : null,
         transportEnabled,
-        transportVehicle: transportEnabled
-          ? transportVehicle.trim() || null
-          : null,
+        transportVehicleId: transportEnabled ? transportVehicleId || null : null,
       });
       onClose();
     } finally {
@@ -368,12 +366,18 @@ export function EventModal({
               Transport
             </label>
             {transportEnabled && (
-              <input
-                value={transportVehicle}
-                onChange={(e) => setTransportVehicle(e.target.value)}
-                placeholder="Auto, którym pojedzie ekipa"
-                className="w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
-              />
+              <select
+                value={transportVehicleId}
+                onChange={(e) => setTransportVehicleId(e.target.value)}
+                className="w-full rounded-md border border-border-subtle bg-background px-2.5 py-1.5 text-sm text-foreground focus:border-accent focus:outline-none"
+              >
+                <option value="">Wybierz pojazd…</option>
+                {vehicles.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
             )}
           </div>
 

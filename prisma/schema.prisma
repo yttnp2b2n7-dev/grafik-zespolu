@@ -71,10 +71,11 @@ model Event {
   eventTypes        EventType[]  @default([])
   loadingEnabled    Boolean      @default(false)
   loadingTime       String?
-  transportEnabled  Boolean      @default(false)
-  transportVehicle  String?
-  notes             String?
-  assignments       Assignment[]
+  transportEnabled   Boolean      @default(false)
+  transportVehicleId String?
+  transportVehicle   Vehicle?     @relation("EventTransportVehicle", fields: [transportVehicleId], references: [id], onDelete: SetNull)
+  notes              String?
+  assignments        Assignment[]
   vehicleAssignments VehicleAssignment[]
 
   @@index([groupId])
@@ -107,6 +108,7 @@ model Vehicle {
   createdAt      DateTime            @default(now())
   assignments    VehicleAssignment[]
   serviceBlocks  VehicleService[]
+  transportEvents Event[] @relation("EventTransportVehicle")
 }
 
 model VehicleService {

@@ -772,7 +772,7 @@ export default function SchedulePage() {
               loadingEnabled: removed.loadingEnabled,
               loadingTime: removed.loadingTime,
               transportEnabled: removed.transportEnabled,
-              transportVehicle: removed.transportVehicle,
+              transportVehicleId: removed.transportVehicleId,
             }),
           });
           const newEvent: Event = await res.json();
@@ -814,7 +814,7 @@ export default function SchedulePage() {
     loadingEnabled: boolean;
     loadingTime: string | null;
     transportEnabled: boolean;
-    transportVehicle: string | null;
+    transportVehicleId: string | null;
   }) {
     const res = await fetch("/api/events", {
       method: "POST",
@@ -837,7 +837,7 @@ export default function SchedulePage() {
       loadingEnabled: boolean;
       loadingTime: string | null;
       transportEnabled: boolean;
-      transportVehicle: string | null;
+      transportVehicleId: string | null;
     }
   ) {
     const res = await fetch(`/api/events/${eventId}`, {
@@ -1405,6 +1405,7 @@ export default function SchedulePage() {
       {isAdmin && modalDate && (
         <EventModal
           defaultDate={modalDate}
+          vehicles={vehicles}
           onClose={() => setModalDate(null)}
           onSubmit={createEvent}
         />
@@ -1414,6 +1415,7 @@ export default function SchedulePage() {
         <EventModal
           defaultDate={format(new Date(editingEvent.startsAt), "yyyy-MM-dd")}
           event={editingEvent}
+          vehicles={vehicles}
           onClose={() => setEditingEvent(null)}
           onSubmit={(data) => updateEvent(editingEvent.id, data)}
         />

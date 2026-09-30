@@ -82,7 +82,8 @@ export type Event = {
   loadingEnabled: boolean;
   loadingTime: string | null;
   transportEnabled: boolean;
-  transportVehicle: string | null;
+  transportVehicleId: string | null;
+  transportVehicle: Vehicle | null;
   notes: string | null;
   assignments: Assignment[];
   vehicleAssignments: VehicleAssignment[];

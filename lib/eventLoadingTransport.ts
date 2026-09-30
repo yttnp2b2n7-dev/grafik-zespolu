@@ -6,12 +6,10 @@ export function parseLoadingTransportInput(body: Record<string, unknown>) {
       : null;
 
   const transportEnabled = body.transportEnabled === true;
-  const transportVehicle =
-    transportEnabled &&
-    typeof body.transportVehicle === "string" &&
-    body.transportVehicle.trim()
-      ? body.transportVehicle.trim()
+  const transportVehicleId =
+    transportEnabled && typeof body.transportVehicleId === "string" && body.transportVehicleId
+      ? body.transportVehicleId
       : null;
 
-  return { loadingEnabled, loadingTime, transportEnabled, transportVehicle };
+  return { loadingEnabled, loadingTime, transportEnabled, transportVehicleId };
 }

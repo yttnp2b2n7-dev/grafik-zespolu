@@ -27,7 +27,7 @@ export function formatEventReportText(event: Event): string {
     lines.push(`Załadunek: ${event.loadingTime || "-"}`);
   }
   if (event.transportEnabled) {
-    lines.push(`Transport: ${event.transportVehicle || "-"}`);
+    lines.push(`Transport: ${event.transportVehicle?.name || "-"}`);
   }
   return lines.join("\n");
 }

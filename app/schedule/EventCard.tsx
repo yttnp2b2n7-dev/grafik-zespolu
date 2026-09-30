@@ -116,7 +116,7 @@ export function EventCard({
               {event.transportEnabled && (
                 <span>
                   Transport
-                  {event.transportVehicle ? `: ${event.transportVehicle}` : ""}
+                  {event.transportVehicle ? `: ${event.transportVehicle.name}` : ""}
                 </span>
               )}
             </p>
