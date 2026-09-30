@@ -12,19 +12,28 @@ import {
 } from "@dnd-kit/core";
 import {
   addDays,
+  addMonths,
   addWeeks,
   differenceInCalendarDays,
+  endOfMonth,
+  endOfWeek,
   format,
   isSameDay,
+  isSameMonth,
   startOfDay,
+  startOfMonth,
   startOfWeek,
+  subMonths,
   subWeeks,
 } from "date-fns";
 import { pl } from "date-fns/locale";
+import Link from "next/link";
 import type { Assignment, Event, Person, Vehicle, VehicleAssignment } from "@/lib/types";
+import { DEFAULT_EVENT_COLOR } from "@/lib/eventColors";
 import { PersonTile } from "./PersonTile";
 import { VehicleTile } from "./VehicleTile";
 import { EventCard } from "./EventCard";
+import { MonthGrid } from "./MonthGrid";
 import { EventModal } from "./EventModal";
 import { useSession } from "../session-context";
 import { useUndo } from "@/lib/undo-context";
@@ -34,6 +43,7 @@ import {
   EVENT_TYPE_LABELS,
   EVENT_TYPE_LETTERS,
   EVENT_TYPE_OPTIONS,
+  getEventTypeAccentColor,
   type EventType,
 } from "@/lib/eventType";
 import {
@@ -131,11 +141,13 @@ export default function SchedulePage() {
   const { role } = useSession();
   const pushUndo = useUndo();
   const isAdmin = role === "admin";
-  const [viewMode, setViewMode] = useState<"week" | "day">("week");
+  const [viewMode, setViewMode] = useState<"week" | "day" | "month">("week");
   const [weekStart, setWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 1 })
   );
   const [dayViewDate, setDayViewDate] = useState(() => startOfDay(new Date()));
+  const [monthAnchor, setMonthAnchor] = useState(() => startOfMonth(new Date()));
+  const [expandedDay, setExpandedDay] = useState<Date | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
@@ -191,8 +203,15 @@ export default function SchedulePage() {
     if (viewMode === "day") {
       return { rangeStart: addDays(dayViewDate, -1), rangeEnd: addDays(dayViewDate, 1) };
     }
+    if (viewMode === "month") {
+      const gridStart = startOfWeek(startOfMonth(monthAnchor), { weekStartsOn: 1 });
+      const gridLastDay = startOfDay(
+        endOfWeek(endOfMonth(monthAnchor), { weekStartsOn: 1 })
+      );
+      return { rangeStart: gridStart, rangeEnd: addDays(gridLastDay, 1) };
+    }
     return { rangeStart: weekStart, rangeEnd: addDays(weekStart, 7) };
-  }, [viewMode, weekStart, dayViewDate]);
+  }, [viewMode, weekStart, dayViewDate, monthAnchor]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
@@ -248,7 +267,8 @@ export default function SchedulePage() {
 
   useEffect(() => {
     setFreeDayFilter(null);
-  }, [viewMode, weekStart, dayViewDate]);
+    setExpandedDay(null);
+  }, [viewMode, weekStart, dayViewDate, monthAnchor]);
 
   usePolling(() => {
     if (isDraggingRef.current) return;
@@ -851,6 +871,13 @@ export default function SchedulePage() {
   }
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const monthDays =
+    viewMode === "month"
+      ? Array.from(
+          { length: differenceInCalendarDays(rangeEnd, rangeStart) },
+          (_, i) => addDays(rangeStart, i)
+        )
+      : [];
 
   const freeDayAssignedIds = freeDayFilter
     ? new Set(
@@ -992,9 +1019,45 @@ export default function SchedulePage() {
               >
                 Dzień
               </button>
+              <button
+                onClick={() => setViewMode("month")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition ${
+                  viewMode === "month"
+                    ? "bg-accent text-white"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                Miesiąc
+              </button>
             </div>
 
-            {viewMode === "week" ? (
+            {viewMode === "month" ? (
+              <>
+                <button
+                  onClick={() => setMonthAnchor((d) => subMonths(d, 1))}
+                  className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+                  aria-label="Poprzedni miesiąc"
+                >
+                  ←
+                </button>
+                <div className="text-sm capitalize text-foreground">
+                  {format(monthAnchor, "LLLL yyyy", { locale: pl })}
+                </div>
+                <button
+                  onClick={() => setMonthAnchor((d) => addMonths(d, 1))}
+                  className="rounded-md border border-border-subtle px-2.5 py-1.5 text-sm text-muted hover:border-accent hover:text-foreground"
+                  aria-label="Następny miesiąc"
+                >
+                  →
+                </button>
+                <button
+                  onClick={() => setMonthAnchor(startOfMonth(new Date()))}
+                  className="rounded-md px-2.5 py-1.5 text-xs text-muted hover:text-foreground"
+                >
+                  Dziś
+                </button>
+              </>
+            ) : viewMode === "week" ? (
               <>
                 <button
                   onClick={() => setWeekStart((d) => subWeeks(d, 1))}
@@ -1072,7 +1135,7 @@ export default function SchedulePage() {
               </>
             )}
           </div>
-          {isAdmin && (
+          {isAdmin && viewMode !== "month" && (
             <button
               onClick={() =>
                 setModalDate(
@@ -1087,9 +1150,11 @@ export default function SchedulePage() {
         </div>
 
         <div
-          className={`mt-6 grid grid-cols-1 gap-6 ${isAdmin ? "lg:grid-cols-[200px_1fr]" : ""}`}
+          className={`mt-6 grid grid-cols-1 gap-6 ${
+            isAdmin && viewMode !== "month" ? "lg:grid-cols-[200px_1fr]" : ""
+          }`}
         >
-          {isAdmin && (
+          {isAdmin && viewMode !== "month" && (
             <aside className="h-max max-h-[calc(100vh-3rem)] overflow-y-auto rounded-lg border border-border-subtle bg-surface/50 p-3 lg:sticky lg:top-6">
               <div className="mb-2 flex rounded-md border border-border-subtle p-0.5">
                 <button
@@ -1229,7 +1294,17 @@ export default function SchedulePage() {
                 <span className="text-xs text-muted">{LEAD_LABEL}</span>
               </div>
             </div>
-            {viewMode === "week" ? (
+            {viewMode === "month" ? (
+              <MonthGrid
+                days={monthDays}
+                monthAnchor={monthAnchor}
+                events={events}
+                expandedDay={expandedDay}
+                onExpandDay={setExpandedDay}
+                onCollapseDay={() => setExpandedDay(null)}
+                readOnly={!isAdmin}
+              />
+            ) : viewMode === "week" ? (
             <div className="overflow-x-auto">
             <div className="grid min-w-[1050px] grid-cols-7 gap-3">
               {days.map((day, i) => (
