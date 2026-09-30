@@ -35,7 +35,7 @@ export default function LoginPage() {
           Grafik ImpactVision
         </h1>
         <p className="mt-1 text-sm text-muted">
-          Wpisz hasło, aby przejść do aplikacji.
+          Wpisz hasło, aby przejść do aplikacji. (TEST PODGLĄDU)
         </p>
 
         <input
