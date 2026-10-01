@@ -26,18 +26,25 @@ export function EventAssignedPeopleList({
   onToggleWorkType,
   onToggleLead,
   hideSkills,
+  collapsible,
 }: {
   event: Event;
   onToggleRole?: (assignmentId: string, type: EventType, checked: boolean) => void;
   onToggleWorkType?: (assignmentId: string, type: WorkType, checked: boolean) => void;
   onToggleLead?: (assignmentId: string, isLead: boolean) => void;
   hideSkills?: boolean;
+  // Only the full admin event page collapses a large crew to 3 + "Pokaż
+  // więcej" - the visitor quick-view modal and month-view popup reuse this
+  // same list but always show everyone, since collapsing a list inside an
+  // already-small popup just adds an extra click for no space saved.
+  collapsible?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const COLLAPSED_LIMIT = 3;
-  const visibleAssignments = expanded
-    ? event.assignments
-    : event.assignments.slice(0, COLLAPSED_LIMIT);
+  const visibleAssignments =
+    expanded || !collapsible
+      ? event.assignments
+      : event.assignments.slice(0, COLLAPSED_LIMIT);
 
   return (
     <div>
@@ -182,7 +189,7 @@ export function EventAssignedPeopleList({
           })}
         </ul>
       )}
-      {event.assignments.length > COLLAPSED_LIMIT && (
+      {collapsible && event.assignments.length > COLLAPSED_LIMIT && (
         <button
           onClick={() => setExpanded((prev) => !prev)}
           className="mt-2 w-full rounded-md border border-border-subtle px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-foreground"

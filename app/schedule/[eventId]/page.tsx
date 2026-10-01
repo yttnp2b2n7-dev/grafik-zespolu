@@ -320,6 +320,7 @@ export default function EventPage() {
             onToggleRole={toggleAssignmentRole}
             onToggleWorkType={toggleAssignmentWorkType}
             onToggleLead={toggleLead}
+            collapsible
           />
         </div>
 
