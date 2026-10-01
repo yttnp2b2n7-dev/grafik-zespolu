@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Event } from "@/lib/types";
 import {
   EVENT_TYPE_COLORS,
@@ -32,6 +33,12 @@ export function EventAssignedPeopleList({
   onToggleLead?: (assignmentId: string, isLead: boolean) => void;
   hideSkills?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const COLLAPSED_LIMIT = 3;
+  const visibleAssignments = expanded
+    ? event.assignments
+    : event.assignments.slice(0, COLLAPSED_LIMIT);
+
   return (
     <div>
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted">
@@ -41,7 +48,7 @@ export function EventAssignedPeopleList({
         <p className="text-sm text-muted/60">Brak przypisanych osób.</p>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {event.assignments.map((a) => {
+          {visibleAssignments.map((a) => {
             const availableTypes = EVENT_TYPE_OPTIONS.filter((type) =>
               event.eventTypes.includes(type)
             );
@@ -174,6 +181,16 @@ export function EventAssignedPeopleList({
             );
           })}
         </ul>
+      )}
+      {event.assignments.length > COLLAPSED_LIMIT && (
+        <button
+          onClick={() => setExpanded((prev) => !prev)}
+          className="mt-2 w-full rounded-md border border-border-subtle px-2 py-1 text-xs text-muted transition hover:border-accent hover:text-foreground"
+        >
+          {expanded
+            ? "Zwiń listę"
+            : `Pokaż więcej (${event.assignments.length - COLLAPSED_LIMIT})`}
+        </button>
       )}
     </div>
   );
