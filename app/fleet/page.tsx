@@ -9,6 +9,8 @@ import { parseLocalDate } from "@/lib/localDate";
 import { useUndo } from "@/lib/undo-context";
 import { usePolling } from "@/lib/usePolling";
 import { getExpiryStatus, type ExpiryStatus } from "@/lib/vehicleExpiry";
+import { useSession } from "../session-context";
+import { VehicleNotes } from "./VehicleNotes";
 
 function ExpiryBadge({ label, date }: { label: string; date: string | null }) {
   const status = getExpiryStatus(date);
@@ -34,6 +36,8 @@ function ExpiryBadge({ label, date }: { label: string; date: string | null }) {
 
 export default function FleetPage() {
   const pushUndo = useUndo();
+  const { role, loading: sessionLoading } = useSession();
+  const isVisitor = role === "visitor";
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
@@ -175,6 +179,83 @@ export default function FleetPage() {
     await fetch(`/api/vehicle-service/${blockId}`, { method: "DELETE" });
   }
 
+  async function addNote(vehicleId: string, text: string) {
+    const res = await fetch("/api/vehicle-notes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vehicleId, text }),
+    });
+    if (!res.ok) return false;
+    await loadVehicles();
+    return true;
+  }
+
+  async function resolveNote(noteId: string, resolved: boolean) {
+    await fetch(`/api/vehicle-notes/${noteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ resolved }),
+    });
+    await loadVehicles();
+  }
+
+  // Until the role is known, don't flash the admin form to a visitor.
+  if (sessionLoading) {
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-10">
+        <p className="text-sm text-muted">Ładowanie…</p>
+      </div>
+    );
+  }
+
+  if (isVisitor) {
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-10">
+        <h1 className="text-xl font-semibold text-foreground">Flota</h1>
+        <p className="mt-1 text-sm text-muted">
+          Podgląd pojazdów. Jeśli coś wymaga uwagi (np. uszkodzona żarówka,
+          potrzebny serwis), dodaj uwagę przy samochodzie.
+        </p>
+
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Szukaj po nazwie lub numerze rejestracyjnym…"
+          className="mt-6 w-full rounded-md border border-border-subtle bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none"
+        />
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {loading && <p className="text-sm text-muted">Ładowanie…</p>}
+          {!loading && vehicles.length === 0 && (
+            <p className="text-sm text-muted">Brak pojazdów.</p>
+          )}
+          {!loading && vehicles.length > 0 && filteredVehicles.length === 0 && (
+            <p className="text-sm text-muted">Brak pojazdów pasujących do wyszukiwania.</p>
+          )}
+          {filteredVehicles.map((vehicle) => (
+            <div
+              key={vehicle.id}
+              className="rounded-lg border border-border-subtle bg-surface p-4"
+            >
+              <span className="text-sm font-medium text-foreground">{vehicle.name}</span>
+              <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
+                {vehicle.plateNumber && <span>{vehicle.plateNumber}</span>}
+                {vehicle.type && <span>· {vehicle.type}</span>}
+                {vehicle.capacity && <span>· {vehicle.capacity}</span>}
+              </div>
+              <VehicleNotes
+                notes={vehicle.notes}
+                canResolve={false}
+                onAdd={(text) => addNote(vehicle.id, text)}
+                onResolve={() => {}}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <h1 className="text-xl font-semibold text-foreground">Flota</h1>
@@ -274,6 +355,8 @@ export default function FleetPage() {
               sendToService(vehicle.id, startDate, endDate)
             }
             onCancelService={(blockId) => cancelService(vehicle.id, blockId)}
+            onAddNote={(text) => addNote(vehicle.id, text)}
+            onResolveNote={resolveNote}
           />
         ))}
       </div>
@@ -318,8 +401,12 @@ function VehicleCard({
   onSave,
   onSendToService,
   onCancelService,
+  onAddNote,
+  onResolveNote,
 }: {
   vehicle: Vehicle;
+  onAddNote: (text: string) => Promise<boolean>;
+  onResolveNote: (noteId: string, resolved: boolean) => void;
   onRemove: () => void;
   onSave: (data: {
     name: string;
@@ -578,6 +665,14 @@ function VehicleCard({
       )}
       {!isEditing && vehicle.note && (
         <p className="mt-2 text-xs text-muted">{vehicle.note}</p>
+      )}
+      {!isEditing && (
+        <VehicleNotes
+          notes={vehicle.notes}
+          canResolve
+          onAdd={onAddNote}
+          onResolve={onResolveNote}
+        />
       )}
     </div>
   );
