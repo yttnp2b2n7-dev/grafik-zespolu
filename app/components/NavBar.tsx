@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "../session-context";
+import { usePolling } from "@/lib/usePolling";
+import type { Vehicle } from "@/lib/types";
 
 const links = [
   { href: "/schedule", label: "Grafik" },
@@ -11,9 +14,29 @@ const links = [
   { href: "/reports", label: "Raport" },
 ];
 
+async function refreshFleetAlert(setHasOpenIssues: (value: boolean) => void) {
+  const res = await fetch("/api/vehicles");
+  if (!res.ok) return;
+  const vehicles: Vehicle[] = await res.json();
+  setHasOpenIssues(vehicles.some((v) => v.notes.some((n) => !n.resolvedAt)));
+}
+
 export function NavBar() {
   const pathname = usePathname();
   const { role } = useSession();
+  const [fleetHasOpenIssues, setFleetHasOpenIssues] = useState(false);
+
+  // Small red "!" next to Flota when any vehicle has an unresolved note,
+  // so the problem is visible from every page, not only the fleet page.
+  const watchFleet = !!role && pathname !== "/login";
+  useEffect(() => {
+    if (watchFleet) refreshFleetAlert(setFleetHasOpenIssues);
+  }, [watchFleet, pathname]);
+  usePolling(
+    () => refreshFleetAlert(setFleetHasOpenIssues),
+    15000,
+    watchFleet
+  );
 
   if (pathname === "/login") return null;
 
@@ -48,6 +71,15 @@ export function NavBar() {
                 }`}
               >
                 {link.label}
+                {link.href === "/fleet" && fleetHasOpenIssues && (
+                  <span
+                    title="Nienaprawione uwagi w flocie"
+                    aria-label="Nienaprawione uwagi w flocie"
+                    className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-danger text-[10px] font-bold leading-none text-white"
+                  >
+                    !
+                  </span>
+                )}
               </Link>
             );
           })}
