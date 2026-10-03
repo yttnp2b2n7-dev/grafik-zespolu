@@ -27,7 +27,8 @@ export async function GET() {
         insuranceDate: null,
         note: null,
         serviceBlocks: [],
-        notes: v.notes,
+        // Done issues are the manager's history, not the visitor's concern.
+        notes: v.notes.filter((n) => !n.resolvedAt),
       }))
     );
   }

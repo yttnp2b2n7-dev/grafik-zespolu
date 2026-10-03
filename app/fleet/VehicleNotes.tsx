@@ -78,7 +78,7 @@ export function VehicleNotes({
         </ul>
       )}
 
-      {done.length > 0 && (
+      {canResolve && done.length > 0 && (
         <div className="mt-2">
           <button
             onClick={() => setShowDone((prev) => !prev)}
