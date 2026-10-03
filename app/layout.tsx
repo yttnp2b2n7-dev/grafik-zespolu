@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { NavBar } from "./components/NavBar";
 import { Footer } from "./components/Footer";
+import { CrewSmsQueueBar } from "./components/CrewSmsQueueBar";
 import { SessionProvider } from "./session-context";
 import { UndoProvider } from "@/lib/undo-context";
 import "./globals.css";
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <NavBar />
             <main className="flex-1">{children}</main>
             <Footer />
+            <CrewSmsQueueBar />
           </UndoProvider>
         </SessionProvider>
       </body>

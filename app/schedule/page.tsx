@@ -37,6 +37,7 @@ import { MonthGrid } from "./MonthGrid";
 import { EventModal } from "./EventModal";
 import { useSession } from "../session-context";
 import { useUndo } from "@/lib/undo-context";
+import { queueCrewSms } from "@/lib/crewSmsQueue";
 import { fetchJsonOrNull } from "@/lib/clientFetch";
 import {
   EVENT_TYPE_COLORS,
@@ -361,6 +362,14 @@ export default function SchedulePage() {
       await fetch(`/api/assignments/${sourceAssignmentId}`, {
         method: "DELETE",
       });
+      const sourceEvent = events.find((ev) => ev.id === sourceEventId);
+      if (sourceEvent) {
+        queueCrewSms("remove", sourceEvent, assignment.person);
+      }
+    }
+    const targetEvent = events.find((ev) => ev.id === eventId);
+    if (targetEvent) {
+      queueCrewSms("add", targetEvent, assignment.person);
     }
 
     localVersionRef.current += 1;
@@ -612,6 +621,11 @@ export default function SchedulePage() {
       )
     );
 
+    // Removals go first so someone kept on both days cancels out instead of
+    // getting a "removed" and an "added" text back to back.
+    for (const a of toRemove) queueCrewSms("remove", event, a.person);
+    for (const a of created) queueCrewSms("add", event, a.person);
+
     localVersionRef.current += 1;
     setEvents((prev) =>
       prev.map((ev) =>
@@ -724,14 +738,30 @@ export default function SchedulePage() {
   }
 
   async function removeAssignment(assignmentId: string) {
-    let removed: { eventId: string; personId: string; personName: string; isLead: boolean } | null =
-      null;
+    let removed: {
+      eventId: string;
+      personId: string;
+      personName: string;
+      isLead: boolean;
+      event: Event;
+      person: Assignment["person"];
+    } | null = null;
     for (const ev of events) {
       const a = ev.assignments.find((a) => a.id === assignmentId);
       if (a) {
-        removed = { eventId: ev.id, personId: a.personId, personName: a.person.name, isLead: a.isLead };
+        removed = {
+          eventId: ev.id,
+          personId: a.personId,
+          personName: a.person.name,
+          isLead: a.isLead,
+          event: ev,
+          person: a.person,
+        };
         break;
       }
+    }
+    if (removed) {
+      queueCrewSms("remove", removed.event, removed.person);
     }
 
     localVersionRef.current += 1;
@@ -760,6 +790,7 @@ export default function SchedulePage() {
               body: JSON.stringify({ isLead: true }),
             });
           }
+          queueCrewSms("add", removed.event, removed.person);
           await loadEvents();
         },
       });
