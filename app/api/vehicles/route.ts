@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getRequestRole } from "@/lib/requestRole";
 
 export async function GET() {
   const vehicles = await prisma.vehicle.findMany({
     orderBy: { name: "asc" },
-    include: { serviceBlocks: { orderBy: { startDate: "asc" } } },
+    include: {
+      serviceBlocks: { orderBy: { startDate: "asc" } },
+      notes: { orderBy: { createdAt: "asc" } },
+    },
   });
+
+  // Visitors see the fleet to report problems, not to manage it: inspection
+  // and insurance dates, service blocks and the admin's own note stay hidden.
+  // Filtered here, not only in the UI, so the data never leaves the server.
+  if ((await getRequestRole()) === "visitor") {
+    return NextResponse.json(
+      vehicles.map((v) => ({
+        id: v.id,
+        name: v.name,
+        plateNumber: v.plateNumber,
+        type: v.type,
+        capacity: v.capacity,
+        createdAt: v.createdAt,
+        inspectionDate: null,
+        insuranceDate: null,
+        note: null,
+        serviceBlocks: [],
+        notes: v.notes,
+      }))
+    );
+  }
+
   return NextResponse.json(vehicles);
 }
 

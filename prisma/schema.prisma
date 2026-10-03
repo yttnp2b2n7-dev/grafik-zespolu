@@ -126,6 +126,18 @@ model Vehicle {
   assignments    VehicleAssignment[]
   serviceBlocks  VehicleService[]
   transportEvents Event[] @relation("EventTransportVehicle")
+  notes          VehicleNote[]
+}
+
+model VehicleNote {
+  id         String    @id @default(cuid())
+  vehicleId  String
+  text       String
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  vehicle    Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
 }
 
 model VehicleService {

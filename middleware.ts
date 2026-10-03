@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   "/api/cron/daily-backup",
 ];
 
+const VISITOR_PAGES = ["/", "/schedule", "/fleet"];
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
@@ -27,8 +29,12 @@ export async function middleware(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     if (role === "visitor") {
-      const isAllowedRead = req.method === "GET" && pathname.startsWith("/api/events");
-      if (!isAllowedRead) {
+      const isAllowedRead =
+        req.method === "GET" &&
+        (pathname.startsWith("/api/events") || pathname === "/api/vehicles");
+      // Visitors may add fleet notes; closing them is checked in the route.
+      const isAllowedNote = req.method === "POST" && pathname === "/api/vehicle-notes";
+      if (!isAllowedRead && !isAllowedNote) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
@@ -41,7 +47,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (role === "visitor" && pathname !== "/" && pathname !== "/schedule") {
+  if (role === "visitor" && !VISITOR_PAGES.includes(pathname)) {
     const url = req.nextUrl.clone();
     url.pathname = "/schedule";
     return NextResponse.redirect(url);

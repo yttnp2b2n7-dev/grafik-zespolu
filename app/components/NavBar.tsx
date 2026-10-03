@@ -18,7 +18,9 @@ export function NavBar() {
   if (pathname === "/login") return null;
 
   const visibleLinks =
-    role === "visitor" ? links.filter((l) => l.href === "/schedule") : links;
+    role === "visitor"
+      ? links.filter((l) => l.href === "/schedule" || l.href === "/fleet")
+      : links;
 
   async function handleLogout() {
     await fetch("/api/logout", { method: "POST" });

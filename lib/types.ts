@@ -62,6 +62,15 @@ export type Vehicle = {
   note: string | null;
   createdAt: string;
   serviceBlocks: VehicleService[];
+  notes: VehicleNote[];
+};
+
+export type VehicleNote = {
+  id: string;
+  vehicleId: string;
+  text: string;
+  createdAt: string;
+  resolvedAt: string | null;
 };
 
 export type VehicleAssignment = {
