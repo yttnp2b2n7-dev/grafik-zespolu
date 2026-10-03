@@ -34,6 +34,10 @@ function ExpiryBadge({ label, date }: { label: string; date: string | null }) {
   );
 }
 
+function hasOpenIssues(vehicle: Vehicle) {
+  return vehicle.notes.some((n) => !n.resolvedAt);
+}
+
 export default function FleetPage() {
   const pushUndo = useUndo();
   const { role, loading: sessionLoading } = useSession();
@@ -62,11 +66,18 @@ export default function FleetPage() {
   usePolling(loadVehicles, 15000);
 
   const searchQuery = search.trim().toLowerCase();
-  const filteredVehicles = vehicles.filter(
-    (v) =>
-      v.name.toLowerCase().includes(searchQuery) ||
-      (v.plateNumber ?? "").toLowerCase().includes(searchQuery)
-  );
+  // Cars with unresolved notes go to the top, so problems aren't buried.
+  const filteredVehicles = vehicles
+    .filter(
+      (v) =>
+        v.name.toLowerCase().includes(searchQuery) ||
+        (v.plateNumber ?? "").toLowerCase().includes(searchQuery)
+    )
+    .sort(
+      (a, b) =>
+        Number(hasOpenIssues(b)) - Number(hasOpenIssues(a)) ||
+        a.name.localeCompare(b.name, "pl")
+    );
 
   async function addVehicle(e: React.FormEvent) {
     e.preventDefault();
@@ -235,9 +246,18 @@ export default function FleetPage() {
           {filteredVehicles.map((vehicle) => (
             <div
               key={vehicle.id}
-              className="rounded-lg border border-border-subtle bg-surface p-4"
+              className={`rounded-lg border bg-surface p-4 ${
+                hasOpenIssues(vehicle)
+                  ? "border-danger/70 shadow-[0_0_0_1px_var(--danger)]"
+                  : "border-border-subtle"
+              }`}
             >
               <span className="text-sm font-medium text-foreground">{vehicle.name}</span>
+            {hasOpenIssues(vehicle) && (
+              <span className="ml-2 whitespace-nowrap rounded-full bg-danger/15 px-2 py-0.5 text-xs text-danger">
+                Nienaprawione uwagi
+              </span>
+            )}
               <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
                 {vehicle.plateNumber && <span>{vehicle.plateNumber}</span>}
                 {vehicle.type && <span>· {vehicle.type}</span>}
@@ -493,7 +513,13 @@ function VehicleCard({
   }
 
   return (
-    <div className="rounded-lg border border-border-subtle bg-surface p-4">
+    <div
+      className={`rounded-lg border bg-surface p-4 ${
+        hasOpenIssues(vehicle)
+          ? "border-danger/70 shadow-[0_0_0_1px_var(--danger)]"
+          : "border-border-subtle"
+      }`}
+    >
       {isEditing ? (
         <form onSubmit={submitDetails} className="flex flex-col gap-2">
           <input
@@ -567,6 +593,11 @@ function VehicleCard({
         <div className="flex items-start justify-between">
           <div>
             <span className="text-sm font-medium text-foreground">{vehicle.name}</span>
+            {hasOpenIssues(vehicle) && (
+              <span className="ml-2 whitespace-nowrap rounded-full bg-danger/15 px-2 py-0.5 text-xs text-danger">
+                Nienaprawione uwagi
+              </span>
+            )}
             <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted">
               {vehicle.plateNumber && <span>{vehicle.plateNumber}</span>}
               {vehicle.type && <span>· {vehicle.type}</span>}
