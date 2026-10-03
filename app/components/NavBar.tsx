@@ -27,8 +27,8 @@ export function NavBar() {
   const [fleetHasOpenIssues, setFleetHasOpenIssues] = useState(false);
 
   // Small red "!" next to Flota when any vehicle has an unresolved note,
-  // so the problem is visible from every page, not only the fleet page.
-  const watchFleet = !!role && pathname !== "/login";
+  // so the admin sees the problem from every page, not only the fleet page.
+  const watchFleet = role === "admin" && pathname !== "/login";
   useEffect(() => {
     if (watchFleet) refreshFleetAlert(setFleetHasOpenIssues);
   }, [watchFleet, pathname]);
@@ -71,7 +71,7 @@ export function NavBar() {
                 }`}
               >
                 {link.label}
-                {link.href === "/fleet" && fleetHasOpenIssues && (
+                {role === "admin" && link.href === "/fleet" && fleetHasOpenIssues && (
                   <span
                     title="Nienaprawione uwagi w flocie"
                     aria-label="Nienaprawione uwagi w flocie"
